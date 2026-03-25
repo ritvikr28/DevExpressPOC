@@ -38,7 +38,6 @@ if (jwtSettings == null)
 {
     jwtSettings = new JwtSettings
     {
-        SecretKey = "DefaultDevSecretKey_ReplaceInProduction_MinLength32Chars!",
         Issuer = "DXApplication1",
         Audience = "DXApplication1Users",
         ExpirationMinutes = 60
@@ -46,9 +45,20 @@ if (jwtSettings == null)
 }
 
 // Ensure secret key has minimum length for HMAC-SHA256
+// Only allow fallback to default key in development mode
 if (string.IsNullOrEmpty(jwtSettings.SecretKey) || jwtSettings.SecretKey.Length < 32)
 {
-    jwtSettings.SecretKey = "DefaultDevSecretKey_ReplaceInProduction_MinLength32Chars!";
+    if (builder.Environment.IsDevelopment())
+    {
+        jwtSettings.SecretKey = "DevOnlySecretKey_ReplaceInProduction_MinLength32Chars!";
+        Console.WriteLine("WARNING: Using default development JWT secret key. Configure 'JwtSettings:SecretKey' for production.");
+    }
+    else
+    {
+        throw new InvalidOperationException(
+            "JWT Secret Key must be configured in production. " +
+            "Set 'JwtSettings:SecretKey' in configuration with at least 32 characters.");
+    }
 }
 
 builder.Services.Configure<JwtSettings>(options =>

@@ -212,10 +212,10 @@ export const authFetch = async (
         headers,
     });
 
-    // If unauthorized, clear auth data
+    // If unauthorized, clear auth data and let the caller handle navigation
+    // The ProtectedRoute component will handle the redirect to login
     if (response.status === 401) {
         logout();
-        window.location.href = '/login';
     }
 
     return response;

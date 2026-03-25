@@ -3,6 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { login, isAuthenticated } from '../../services/authService';
 import './Login.css';
 
+interface LocationState {
+    from?: { pathname: string };
+}
+
 export default function Login() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -11,10 +15,15 @@ export default function Login() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Extract the redirect path from location state
+    const getRedirectPath = (): string => {
+        const state = location.state as LocationState | null;
+        return state?.from?.pathname || '/';
+    };
+
     // Redirect if already authenticated
     if (isAuthenticated()) {
-        const from = (location.state as { from?: Location })?.from?.pathname || '/';
-        navigate(from, { replace: true });
+        navigate(getRedirectPath(), { replace: true });
         return null;
     }
 
@@ -25,8 +34,7 @@ export default function Login() {
 
         try {
             await login({ username, password });
-            const from = (location.state as { from?: Location })?.from?.pathname || '/';
-            navigate(from, { replace: true });
+            navigate(getRedirectPath(), { replace: true });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
