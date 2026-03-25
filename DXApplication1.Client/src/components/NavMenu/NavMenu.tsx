@@ -37,6 +37,9 @@ export default function NavMenu() {
                                 <li className="nav-item">
                                     <Link className="nav-link text-dark" to="/DocumentViewer">Document Viewer</Link>
                                 </li>
+                                <li className="nav-item">
+                                    <Link className="nav-link text-dark" to="/ReportManagement">Report Management</Link>
+                                </li>
                             </ul>
                         </div>
                     </div>
