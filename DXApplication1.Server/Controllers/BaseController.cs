@@ -6,7 +6,7 @@ namespace DXApplication1.Server.Controllers
 {
     [Route("api/v1")]
     [ApiController]
-    [Authorize(Policy = "RequireReportViewerRole")]
+    [Authorize]
     public class BaseController : ControllerBase
     {
         private readonly string _metadataPath = "Data/columns-metadata.json";

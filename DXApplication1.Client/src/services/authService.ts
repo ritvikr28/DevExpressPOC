@@ -36,7 +36,22 @@ export const isAuthenticated = (): boolean => {
     
     // Check if token is expired by parsing the JWT payload
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        // Validate JWT structure: must have 3 parts separated by dots
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            return false;
+        }
+        
+        const payloadBase64 = parts[1];
+        if (!payloadBase64) {
+            return false;
+        }
+        
+        const payload = JSON.parse(atob(payloadBase64));
+        if (typeof payload.exp !== 'number') {
+            return false;
+        }
+        
         const expiry = payload.exp * 1000; // Convert to milliseconds
         return Date.now() < expiry;
     } catch {

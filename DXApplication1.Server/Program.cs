@@ -28,6 +28,17 @@ builder.Services.AddAuthentication("Bearer")
     {
         options.Authority = "https://simsid-partner-stsserver.azurewebsites.net/";
         
+        // Configure token validation parameters for security
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+            // Note: ValidAudience should be configured based on your STS configuration
+            // ValidAudience = "your-api-audience"
+        };
+        
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = context =>

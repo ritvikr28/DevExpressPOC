@@ -82,7 +82,6 @@ namespace DXApplication1.Controllers
         /// Save a report to Azure Storage
         /// </summary>
         [HttpPost("{reportName}/save-to-azure")]
-        [Authorize]
         public async Task<ActionResult> SaveToAzure(string reportName)
         {
             if (!_azureBlobStorageService.IsEnabled)
@@ -110,7 +109,6 @@ namespace DXApplication1.Controllers
         /// Generate multiple reports from templates with different parameters
         /// </summary>
         [HttpPost("generate-multiple")]
-        [Authorize]
         public async Task<ActionResult<MultipleReportGenerationResult>> GenerateMultipleReports(
             [FromBody] MultipleReportGenerationRequest request)
         {
@@ -275,7 +273,6 @@ namespace DXApplication1.Controllers
         /// Delete a report from Azure Storage
         /// </summary>
         [HttpDelete("{reportName}/azure")]
-        [Authorize]
         public async Task<ActionResult> DeleteFromAzure(string reportName)
         {
             if (!_azureBlobStorageService.IsEnabled)
