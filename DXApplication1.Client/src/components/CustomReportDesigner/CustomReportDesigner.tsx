@@ -1,26 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import DxReportDesigner, { Callbacks, DesignerModelSettings, PreviewSettings, RequestOptions } from "devexpress-reporting-react/dx-report-designer";
 import { SearchSettings } from 'devexpress-reporting-react/dx-report-viewer';
+import { fetchSetup } from '@devexpress/analytics-core/analytics-utils';
 import { useSearchParams } from 'react-router-dom';
 import { getToken, getAuthHeaders } from '../../services/authService';
 import './CustomReportDesigner.css';
-
-// Extend window to include DevExpress namespace for TypeScript
-declare global {
-    interface Window {
-        DevExpress?: {
-            Analytics?: {
-                Utils?: {
-                    fetchSetup?: {
-                        fetchSettings?: {
-                            headers?: Record<string, string>;
-                        };
-                    };
-                };
-            };
-        };
-    }
-}
 
 interface ColumnSchema {
     Name: string;
@@ -117,22 +101,18 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
         return `${props.hostUrl}api/v1/data?dataSourceName=${encodeURIComponent(selectedDataSource)}&${columnsParam}`;
     }, [selectedDataSource, selectedColumns, props.hostUrl]);
 
-    // BeforeRender callback - Configure DevExpress fetch settings with authorization header
+    // BeforeRender callback - fires before the DevExpress designer makes any HTTP requests,
+    // so this is the correct place to ensure the Authorization header is set.
     const onBeforeRender = useCallback(() => {
         const token = getToken();
-        if (token && window.DevExpress?.Analytics?.Utils?.fetchSetup) {
-            window.DevExpress.Analytics.Utils.fetchSetup.fetchSettings = {
+        if (token) {
+            fetchSetup.fetchSettings = {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             };
         }
     }, []);
-
-    // Set up the fetch interceptor when component mounts
-    useEffect(() => {
-        onBeforeRender();
-    }, [onBeforeRender]);
 
     // Custom callback for when preview is requested
     const onPreviewClick = useCallback(() => {
