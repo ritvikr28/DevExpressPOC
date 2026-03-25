@@ -312,15 +312,16 @@ namespace DXApplication1.Controllers
             {
                 if (targetType == typeof(DateTime) || targetType == typeof(DateTime?))
                 {
-                    return DateTime.Parse(value.ToString()!);
+                    // Use InvariantCulture for consistent parsing across different cultures
+                    return DateTime.Parse(value.ToString()!, System.Globalization.CultureInfo.InvariantCulture);
                 }
                 if (targetType == typeof(int) || targetType == typeof(int?))
                 {
-                    return Convert.ToInt32(value);
+                    return Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture);
                 }
                 if (targetType == typeof(decimal) || targetType == typeof(decimal?))
                 {
-                    return Convert.ToDecimal(value);
+                    return Convert.ToDecimal(value, System.Globalization.CultureInfo.InvariantCulture);
                 }
                 if (targetType == typeof(bool) || targetType == typeof(bool?))
                 {
@@ -328,8 +329,9 @@ namespace DXApplication1.Controllers
                 }
                 return value.ToString();
             }
-            catch
+            catch (FormatException)
             {
+                // Return the string value if conversion fails
                 return value.ToString();
             }
         }

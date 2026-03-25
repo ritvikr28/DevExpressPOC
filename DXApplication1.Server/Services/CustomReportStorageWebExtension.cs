@@ -35,10 +35,10 @@ namespace DXApplication1.Services
             if (File.Exists(filePath))
                 return File.ReadAllBytes(filePath);
 
-            // Then, try to get from Azure Blob Storage
+            // Then, try to get from Azure Blob Storage (using synchronous method)
             if (_azureBlobStorageService.IsEnabled)
             {
-                var stream = _azureBlobStorageService.DownloadReportAsync(url).GetAwaiter().GetResult();
+                var stream = _azureBlobStorageService.DownloadReportSync(url);
                 if (stream != null)
                 {
                     using var ms = new MemoryStream();
@@ -65,11 +65,11 @@ namespace DXApplication1.Services
                     .Select(Path.GetFileNameWithoutExtension)
                 : Enumerable.Empty<string>();
 
-            // Include Azure reports if enabled
+            // Include Azure reports if enabled (using synchronous method)
             var azureReports = Enumerable.Empty<string>();
             if (_azureBlobStorageService.IsEnabled)
             {
-                azureReports = _azureBlobStorageService.ListReportsAsync().GetAwaiter().GetResult();
+                azureReports = _azureBlobStorageService.ListReportsSync();
             }
 
             return fileReports
@@ -85,13 +85,13 @@ namespace DXApplication1.Services
             using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
             report.SaveLayoutToXml(stream);
 
-            // Also save to Azure Blob Storage if enabled
+            // Also save to Azure Blob Storage if enabled (using synchronous method)
             if (_azureBlobStorageService.IsEnabled)
             {
                 using var azureStream = new MemoryStream();
                 report.SaveLayoutToXml(azureStream);
                 azureStream.Position = 0;
-                _azureBlobStorageService.UploadReportAsync(url, azureStream).GetAwaiter().GetResult();
+                _azureBlobStorageService.UploadReportSync(url, azureStream);
                 _logger.LogInformation("Report saved to Azure Blob Storage: {ReportName}", url);
             }
         }

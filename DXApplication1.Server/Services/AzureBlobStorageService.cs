@@ -18,6 +18,11 @@ namespace DXApplication1.Services
         Task<bool> DeleteReportAsync(string reportName);
         Task<bool> ReportExistsAsync(string reportName);
         bool IsEnabled { get; }
+
+        // Synchronous methods for compatibility with DevExpress ReportStorageWebExtension
+        bool UploadReportSync(string reportName, Stream reportStream);
+        Stream? DownloadReportSync(string reportName);
+        List<string> ListReportsSync();
     }
 
     public class AzureBlobStorageService : IAzureBlobStorageService
@@ -187,6 +192,92 @@ namespace DXApplication1.Services
         {
             var safeReportName = Path.GetFileNameWithoutExtension(reportName);
             return $"{safeReportName}.repx";
+        }
+
+        // Synchronous methods for compatibility with DevExpress ReportStorageWebExtension
+        // These methods use synchronous Azure SDK calls to avoid deadlocks
+
+        public bool UploadReportSync(string reportName, Stream reportStream)
+        {
+            if (!_isEnabled || _containerClient == null)
+            {
+                _logger.LogWarning("Azure storage is not enabled. Cannot upload report: {ReportName}", reportName);
+                return false;
+            }
+
+            try
+            {
+                var blobName = GetBlobName(reportName);
+                var blobClient = _containerClient.GetBlobClient(blobName);
+
+                reportStream.Position = 0;
+                blobClient.Upload(reportStream, overwrite: true);
+
+                _logger.LogInformation("Report uploaded successfully to Azure (sync): {ReportName}", reportName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to upload report to Azure (sync): {ReportName}", reportName);
+                return false;
+            }
+        }
+
+        public Stream? DownloadReportSync(string reportName)
+        {
+            if (!_isEnabled || _containerClient == null)
+            {
+                _logger.LogWarning("Azure storage is not enabled. Cannot download report: {ReportName}", reportName);
+                return null;
+            }
+
+            try
+            {
+                var blobName = GetBlobName(reportName);
+                var blobClient = _containerClient.GetBlobClient(blobName);
+
+                if (!blobClient.Exists())
+                {
+                    _logger.LogWarning("Report not found in Azure (sync): {ReportName}", reportName);
+                    return null;
+                }
+
+                var memoryStream = new MemoryStream();
+                blobClient.DownloadTo(memoryStream);
+                memoryStream.Position = 0;
+
+                return memoryStream;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download report from Azure (sync): {ReportName}", reportName);
+                return null;
+            }
+        }
+
+        public List<string> ListReportsSync()
+        {
+            var reports = new List<string>();
+
+            if (!_isEnabled || _containerClient == null)
+            {
+                return reports;
+            }
+
+            try
+            {
+                foreach (var blobItem in _containerClient.GetBlobs())
+                {
+                    var reportName = Path.GetFileNameWithoutExtension(blobItem.Name);
+                    reports.Add(reportName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list reports from Azure (sync)");
+            }
+
+            return reports;
         }
     }
 }
