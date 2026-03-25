@@ -1,14 +1,14 @@
 [
   {
     "Name": "Pupil",
-    "ConnectionString": "Uri=https://localhost:44369/api/v1/data;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Pupil;RootElement="
   },
   {
     "Name": "Staff",
-    "ConnectionString": "Uri=https://localhost:44369/api/v1/data;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Staff;RootElement="
   },
   {
     "Name": "Assessment",
-    "ConnectionString": "Uri=https://localhost:44369/api/v1/data;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Assessment;RootElement="
   }
 ]
