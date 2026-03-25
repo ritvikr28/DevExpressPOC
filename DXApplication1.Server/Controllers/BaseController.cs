@@ -14,13 +14,13 @@ namespace DXApplication1.Server.Controllers
         /// Gets a list of all available data sources.
         /// </summary>
         [HttpGet("datasources")]
-        public IActionResult GetDataSources()
+        public async Task<IActionResult> GetDataSources()
         {
             if (!System.IO.File.Exists(_connectionsPath))
                 return NotFound("Connections file not found.");
 
-            var json = System.IO.File.ReadAllText(_connectionsPath);
-            using var jsonDoc = JsonDocument.Parse(json);
+            await using var stream = System.IO.File.OpenRead(_connectionsPath);
+            using var jsonDoc = await JsonDocument.ParseAsync(stream);
 
             var dataSources = jsonDoc.RootElement.EnumerateArray()
                 .Select(item => item.GetProperty("Name").GetString())
@@ -46,7 +46,7 @@ namespace DXApplication1.Server.Controllers
             var jsonDoc = await JsonDocument.ParseAsync(stream);
 
             if (!jsonDoc.RootElement.TryGetProperty(dataSourceName, out var columnsElement))
-                return NotFound($"No schema found for '{dataSourceName}'.");
+                return NotFound("Schema not found for the specified data source.");
 
             var columns = columnsElement.EnumerateArray()
                 .Select(col => new

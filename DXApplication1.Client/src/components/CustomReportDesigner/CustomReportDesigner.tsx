@@ -95,10 +95,9 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
         return `${props.hostUrl}api/v1/data?dataSourceName=${encodeURIComponent(selectedDataSource)}&${columnsParam}`;
     }, [selectedDataSource, selectedColumns, props.hostUrl]);
 
-    // Custom BeforeRender callback to set up the designer
+    // BeforeRender callback required by DevExpress Report Designer for initialization
     const onBeforeRender = useCallback(() => {
-        // The designer is initialized here
-        // We can customize the data source connection dynamically
+        // Placeholder for future customizations (e.g., dynamic data source configuration)
     }, []);
 
     // Custom callback for when preview is requested
@@ -172,7 +171,7 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
                         ) : (
                             <div className="column-list">
                                 {schema.map((col) => (
-                                    <div
+                                    <label
                                         key={col.Name}
                                         className={`column-item ${selectedColumns.includes(col.Name) ? 'selected' : ''}`}
                                         draggable
@@ -184,7 +183,6 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
                                             }));
                                             e.dataTransfer.effectAllowed = 'copy';
                                         }}
-                                        onClick={() => handleColumnToggle(col.Name)}
                                     >
                                         <span className="column-icon">{getTypeIcon(col.Type)}</span>
                                         <span className="column-name">{col.Name}</span>
@@ -193,9 +191,9 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
                                             type="checkbox"
                                             checked={selectedColumns.includes(col.Name)}
                                             onChange={() => handleColumnToggle(col.Name)}
-                                            onClick={(e) => e.stopPropagation()}
+                                            aria-label={`Select column ${col.Name}`}
                                         />
-                                    </div>
+                                    </label>
                                 ))}
                             </div>
                         )}

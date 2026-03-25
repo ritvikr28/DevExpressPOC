@@ -143,6 +143,7 @@
     cursor: grab;
     transition: background-color 0.15s;
     user-select: none;
+    position: relative;
 }
 
 .column-item:last-child {
