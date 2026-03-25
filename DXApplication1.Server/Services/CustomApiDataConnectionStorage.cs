@@ -3,6 +3,7 @@ using DevExpress.DataAccess.Native.Json;
 using DevExpress.DataAccess.Web;
 using DevExpress.DataAccess.Wizard.Services;
 using DXApplication1.Data;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
 namespace DXApplication1.Services
@@ -10,20 +11,22 @@ namespace DXApplication1.Services
     public class CustomApiDataConnectionStorage : IDataSourceWizardJsonConnectionStorage
     {
         private static readonly string _connectionsPath = "Data/api-connections.json";
-        private static List<JsonDataConnectionDescription> _apiConnections;
+        private readonly string _baseUrl;
 
-        private static List<JsonDataConnectionDescription> LoadConnections()
+        public CustomApiDataConnectionStorage(IConfiguration configuration)
         {
-            if (_apiConnections != null)
-                return _apiConnections;
+            _baseUrl = (configuration["ReportingBaseUrl"] ?? "https://localhost:44369").TrimEnd('/');
+        }
 
+        private List<JsonDataConnectionDescription> LoadConnections()
+        {
             if (!File.Exists(_connectionsPath))
                 return new List<JsonDataConnectionDescription>();
 
-            var json = File.ReadAllText(_connectionsPath);
-            _apiConnections = JsonSerializer.Deserialize<List<JsonDataConnectionDescription>>(json)
+            var json = File.ReadAllText(_connectionsPath)
+                .Replace("{baseUrl}", _baseUrl);
+            return JsonSerializer.Deserialize<List<JsonDataConnectionDescription>>(json)
                 ?? new List<JsonDataConnectionDescription>();
-            return _apiConnections;
         }
 
         public List<JsonDataConnectionDescription> GetConnections()

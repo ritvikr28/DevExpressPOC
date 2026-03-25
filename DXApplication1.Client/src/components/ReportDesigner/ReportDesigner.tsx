@@ -1,11 +1,13 @@
 import DxReportDesigner, { Callbacks, DesignerModelSettings, PreviewSettings, RequestOptions } from "devexpress-reporting-react/dx-report-designer";
 import { SearchSettings } from 'devexpress-reporting-react/dx-report-viewer';
+import { useSearchParams } from 'react-router-dom';
 import './ReportDesigner.css';
 
 export default function ReportDesigner(props: { hostUrl: string }) {
+    const [searchParams] = useSearchParams();
     const getDesignerModelAction: string = 'DXXRD/GetDesignerModel';
     const getLocalizationAction: string = 'DXXRD/GetLocalization'
-    const reportUrl: string = 'TestReport';
+    const reportUrl: string = searchParams.get('reportUrl') ?? 'TestReport';
     const onBeforeRender = () => { };
     return (
         <DxReportDesigner reportUrl={reportUrl} height="calc(100vh - 90px)" developmentMode={true}>

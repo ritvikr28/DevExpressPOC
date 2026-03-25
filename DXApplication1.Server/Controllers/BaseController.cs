@@ -90,26 +90,6 @@ namespace DXApplication1.Server.Controllers
             if (string.IsNullOrWhiteSpace(dataSourceName))
                 return BadRequest("dataSourceName is required.");
 
-            var metadataPath = "Data/columns-metadata.json";
-            if (!System.IO.File.Exists(metadataPath))
-                return NotFound("Metadata file not found.");
-
-            using var metaStream = System.IO.File.OpenRead(metadataPath);
-            var jsonDoc = await JsonDocument.ParseAsync(metaStream);
-
-            if (!jsonDoc.RootElement.TryGetProperty(dataSourceName, out var columnsElement))
-                return NotFound($"No columns found for '{dataSourceName}'.");
-
-            // If columns is null or empty, return column names
-            if (columns == null || columns.Length == 0)
-            {
-                var columnNames = columnsElement.EnumerateArray()
-                    .Select(col => col.GetProperty("name").GetString())
-                    .ToList();
-                return Ok(columnNames);
-            }
-
-            // Otherwise, return filtered data
             var fileName = dataSourceName.ToLower() switch
             {
                 "pupil" => "Data/pupil-data.json",
@@ -127,23 +107,29 @@ namespace DXApplication1.Server.Controllers
             if (dataDoc.RootElement.ValueKind != JsonValueKind.Array)
                 return NotFound("No data found.");
 
+            // When no columns are specified, return all fields so DevExpress can infer the schema.
+            var columnSet = columns != null && columns.Length > 0
+                ? new HashSet<string>(columns, StringComparer.Ordinal)
+                : null;
+
             var filtered = new List<Dictionary<string, object>>();
             foreach (var element in dataDoc.RootElement.EnumerateArray())
             {
                 var dict = new Dictionary<string, object>();
-                foreach (var col in columns)
+                var props = columnSet != null
+                    ? element.EnumerateObject().Where(p => columnSet.Contains(p.Name))
+                    : element.EnumerateObject();
+
+                foreach (var prop in props)
                 {
-                    if (element.TryGetProperty(col, out var value))
+                    dict[prop.Name] = prop.Value.ValueKind switch
                     {
-                        dict[col] = value.ValueKind switch
-                        {
-                            JsonValueKind.String => value.GetString(),
-                            JsonValueKind.Number => value.TryGetInt64(out var l) ? l : value.GetDouble(),
-                            JsonValueKind.True => true,
-                            JsonValueKind.False => false,
-                            _ => value.ToString()
-                        };
-                    }
+                        JsonValueKind.String => prop.Value.GetString(),
+                        JsonValueKind.Number => prop.Value.TryGetInt64(out var l) ? l : prop.Value.GetDouble(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        _ => prop.Value.ToString()
+                    };
                 }
                 filtered.Add(dict);
             }

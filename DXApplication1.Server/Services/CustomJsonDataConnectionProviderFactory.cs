@@ -1,6 +1,7 @@
 ﻿using DevExpress.DataAccess.Json;
 using DevExpress.DataAccess.Web;
 using DXApplication1.Data;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,14 +10,16 @@ namespace DXApplication1.Services
 {
     public class CustomJsonDataConnectionProviderFactory : IJsonDataConnectionProviderFactory
     {
-        public CustomJsonDataConnectionProviderFactory()
+        private readonly IConfiguration _configuration;
+
+        public CustomJsonDataConnectionProviderFactory(IConfiguration configuration)
         {
+            _configuration = configuration;
         }
 
         public IJsonDataConnectionProviderService Create()
         {
-            // Use API connections from CustomApiDataConnectionStorage
-            var storage = new CustomApiDataConnectionStorage();
+            var storage = new CustomApiDataConnectionStorage(_configuration);
             return new WebDocumentViewerJsonDataConnectionProvider(storage.GetConnections());
         }
     }

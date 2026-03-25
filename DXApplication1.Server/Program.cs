@@ -80,6 +80,6 @@ System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolTy
 //    pattern: "{controller}/{action=Index}/{id?}");
 app.UseEndpoints(endpoints => endpoints.MapControllers());
 
-//app.MapFallbackToFile("/index.html");
+app.MapFallbackToFile("/index.html");
 
 app.Run();
