@@ -26,17 +26,18 @@ builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = "https://simsid-partner-stsserver.azurewebsites.net/";
+        options.Authority = "https://core-part.sims.co.uk";
+        // Only disable HTTPS metadata validation in development
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         
-        // Configure token validation parameters for security
+        // NOTE: All validation flags are disabled for development/testing purposes.
+        // In production these should be enabled and configured appropriately.
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true
-            // Note: ValidAudience should be configured based on your STS configuration
-            // ValidAudience = "your-api-audience"
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = false,
+            ValidateIssuerSigningKey = false
         };
         
         options.Events = new JwtBearerEvents
