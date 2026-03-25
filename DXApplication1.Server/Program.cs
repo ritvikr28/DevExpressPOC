@@ -36,7 +36,7 @@ if (!builder.Environment.IsDevelopment())
 }
 
 // Static handler instance reused across all requests.
-var _devJwtHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+var devJwtHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
@@ -71,9 +71,9 @@ builder.Services.AddAuthentication("Bearer")
                     {
                         try
                         {
-                            if (_devJwtHandler.CanReadToken(token))
+                            if (devJwtHandler.CanReadToken(token))
                             {
-                                var jwt = _devJwtHandler.ReadJwtToken(token);
+                                var jwt = devJwtHandler.ReadJwtToken(token);
                                 var identity = new System.Security.Claims.ClaimsIdentity(jwt.Claims, "Bearer");
                                 context.Principal = new System.Security.Claims.ClaimsPrincipal(identity);
                                 context.Success();
@@ -95,6 +95,7 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 builder.Services.AddMvc();
