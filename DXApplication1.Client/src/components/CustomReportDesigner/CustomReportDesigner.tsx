@@ -2,7 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import DxReportDesigner, { Callbacks, DesignerModelSettings, PreviewSettings, RequestOptions } from "devexpress-reporting-react/dx-report-designer";
 import { SearchSettings } from 'devexpress-reporting-react/dx-report-viewer';
 import { useSearchParams } from 'react-router-dom';
+import { getToken, getAuthHeaders } from '../../services/authService';
 import './CustomReportDesigner.css';
+
+// Extend window to include DevExpress namespace for TypeScript
+declare global {
+    interface Window {
+        DevExpress?: {
+            Analytics?: {
+                Utils?: {
+                    fetchSetup?: {
+                        fetchSettings?: {
+                            headers?: Record<string, string>;
+                        };
+                    };
+                };
+            };
+        };
+    }
+}
 
 interface ColumnSchema {
     Name: string;
@@ -26,7 +44,9 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
     useEffect(() => {
         const fetchDataSources = async () => {
             try {
-                const response = await fetch(`${props.hostUrl}api/v1/datasources`);
+                const response = await fetch(`${props.hostUrl}api/v1/datasources`, {
+                    headers: getAuthHeaders()
+                });
                 if (!response.ok) throw new Error('Failed to fetch data sources');
                 const data = await response.json();
                 setDataSources(data);
@@ -49,7 +69,9 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetch(`${props.hostUrl}api/v1/schema?dataSourceName=${encodeURIComponent(selectedDataSource)}`);
+                const response = await fetch(`${props.hostUrl}api/v1/schema?dataSourceName=${encodeURIComponent(selectedDataSource)}`, {
+                    headers: getAuthHeaders()
+                });
                 if (!response.ok) throw new Error('Failed to fetch schema');
                 const data: ColumnSchema[] = await response.json();
                 setSchema(data);
@@ -95,10 +117,22 @@ export default function CustomReportDesigner(props: { hostUrl: string }) {
         return `${props.hostUrl}api/v1/data?dataSourceName=${encodeURIComponent(selectedDataSource)}&${columnsParam}`;
     }, [selectedDataSource, selectedColumns, props.hostUrl]);
 
-    // BeforeRender callback required by DevExpress Report Designer for initialization
+    // BeforeRender callback - Configure DevExpress fetch settings with authorization header
     const onBeforeRender = useCallback(() => {
-        // Placeholder for future customizations (e.g., dynamic data source configuration)
+        const token = getToken();
+        if (token && window.DevExpress?.Analytics?.Utils?.fetchSetup) {
+            window.DevExpress.Analytics.Utils.fetchSetup.fetchSettings = {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+        }
     }, []);
+
+    // Set up the fetch interceptor when component mounts
+    useEffect(() => {
+        onBeforeRender();
+    }, [onBeforeRender]);
 
     // Custom callback for when preview is requested
     const onPreviewClick = useCallback(() => {

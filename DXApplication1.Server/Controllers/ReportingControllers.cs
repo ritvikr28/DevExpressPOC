@@ -8,17 +8,21 @@ using DevExpress.DataAccess.Sql;
 using DevExpress.XtraReports.Web.ClientControls;
 using DevExpress.XtraReports.Web.ReportDesigner;
 using DevExpress.XtraReports.Web.ReportDesigner.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 
 namespace DXApplication1.Controllers
 {
+    [Authorize]
     public class CustomWebDocumentViewerController : WebDocumentViewerController
     {
         public CustomWebDocumentViewerController(IWebDocumentViewerMvcControllerService controllerService) : base(controllerService)
         {
         }
     }
+
+    [Authorize]
     public class CustomReportDesignerController : ReportDesignerController
     {
         public CustomReportDesignerController(IReportDesignerMvcControllerService controllerService) : base(controllerService)
@@ -43,6 +47,7 @@ namespace DXApplication1.Controllers
         }
     }
 
+    [Authorize]
     public class CustomQueryBuilderController : QueryBuilderController
     {
         public CustomQueryBuilderController(IQueryBuilderMvcControllerService controllerService) : base(controllerService)

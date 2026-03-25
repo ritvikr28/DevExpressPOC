@@ -1,26 +1,21 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, hasAnyRole } from '../services/authService';
+import { isAuthenticated } from '../services/authService';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
-    requiredRoles?: string[];
 }
 
 /**
- * Protected Route component that requires authentication and optional role checks
+ * Protected Route component that requires authentication.
+ * If user is not authenticated (no valid token), they will see an access denied message.
+ * 
+ * Note: Authentication tokens are expected to come from an external STS provider
+ * (e.g., https://simsid-partner-stsserver.azurewebsites.net/).
+ * Use setToken() from authService to store the token after obtaining it.
  */
-export default function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
-    const location = useLocation();
-
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Check if user is authenticated
     if (!isAuthenticated()) {
-        // Redirect to login, saving the current location
-        return <Navigate to="/login" state={{ from: location }} replace />;
-    }
-
-    // Check if user has required roles
-    if (requiredRoles && requiredRoles.length > 0 && !hasAnyRole(requiredRoles)) {
-        // User doesn't have required role, show access denied
+        // Show access denied message - user needs to obtain token from external provider
         return (
             <div style={{ 
                 display: 'flex', 
@@ -28,23 +23,15 @@ export default function ProtectedRoute({ children, requiredRoles }: ProtectedRou
                 alignItems: 'center', 
                 height: '100vh',
                 flexDirection: 'column',
-                gap: '16px'
+                gap: '16px',
+                padding: '20px',
+                textAlign: 'center'
             }}>
-                <h1>Access Denied</h1>
-                <p>You don't have permission to access this page.</p>
-                <button 
-                    onClick={() => window.history.back()}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Go Back
-                </button>
+                <h1>Authentication Required</h1>
+                <p>You need a valid authentication token to access this page.</p>
+                <p style={{ color: '#666', fontSize: '14px' }}>
+                    Please obtain a token from the identity provider and use setToken() to authenticate.
+                </p>
             </div>
         );
     }

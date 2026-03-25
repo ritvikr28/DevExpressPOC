@@ -4,10 +4,8 @@ import ReportViewer from './components/ReportViewer';
 import ReportDesigner from './components/ReportDesigner';
 import CustomReportDesigner from './components/CustomReportDesigner';
 import ReportManagement from './components/ReportManagement';
-import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { App } from './App';
-import { AppRoles } from './services/authService';
 
 function getBaseUrl() {
     return document.getElementsByTagName('base')[0].href;
@@ -15,29 +13,28 @@ function getBaseUrl() {
 
 export const router = createBrowserRouter(createRoutesFromElements(
     <Route path="/" element={<App />}>
-        <Route path="login" element={<Login />} />
         <Route path="/" element={
-            <ProtectedRoute requiredRoles={[AppRoles.ReportViewer, AppRoles.ReportEditor, AppRoles.Admin]}>
+            <ProtectedRoute>
                 <Home />
             </ProtectedRoute>
         } />
         <Route path="DocumentViewer" element={
-            <ProtectedRoute requiredRoles={[AppRoles.ReportViewer, AppRoles.ReportEditor, AppRoles.Admin]}>
+            <ProtectedRoute>
                 <ReportViewer hostUrl={getBaseUrl()} />
             </ProtectedRoute>
         } />
         <Route path="ReportDesigner" element={
-            <ProtectedRoute requiredRoles={[AppRoles.ReportEditor, AppRoles.Admin]}>
+            <ProtectedRoute>
                 <ReportDesigner hostUrl={getBaseUrl()} />
             </ProtectedRoute>
         } />
         <Route path="CustomReportDesigner" element={
-            <ProtectedRoute requiredRoles={[AppRoles.ReportEditor, AppRoles.Admin]}>
+            <ProtectedRoute>
                 <CustomReportDesigner hostUrl={getBaseUrl()} />
             </ProtectedRoute>
         } />
         <Route path="ReportManagement" element={
-            <ProtectedRoute requiredRoles={[AppRoles.ReportViewer, AppRoles.ReportEditor, AppRoles.Admin]}>
+            <ProtectedRoute>
                 <ReportManagement />
             </ProtectedRoute>
         } />

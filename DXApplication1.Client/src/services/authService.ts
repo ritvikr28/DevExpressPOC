@@ -1,30 +1,13 @@
 /**
- * Authentication service for managing JWT tokens and auth state
+ * Authentication service for managing JWT tokens from external STS provider
+ * Tokens are obtained from: https://simsid-partner-stsserver.azurewebsites.net/
  */
 
-export interface LoginRequest {
-    username: string;
-    password: string;
-}
-
-export interface LoginResponse {
-    token: string;
-    expiration: string;
-    username: string;
-    roles: string[];
-}
-
-export interface User {
-    username: string;
-    roles: string[];
-    isActive: boolean;
-}
-
 const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
 
 /**
  * Store authentication token in local storage
+ * Call this after obtaining a token from the external STS provider
  */
 export const setToken = (token: string): void => {
     localStorage.setItem(TOKEN_KEY, token);
@@ -45,40 +28,13 @@ export const removeToken = (): void => {
 };
 
 /**
- * Store user data in local storage
- */
-export const setUser = (user: Omit<LoginResponse, 'token'>): void => {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-};
-
-/**
- * Get user data from local storage
- */
-export const getUser = (): Omit<LoginResponse, 'token'> | null => {
-    const userJson = localStorage.getItem(USER_KEY);
-    if (!userJson) return null;
-    try {
-        return JSON.parse(userJson);
-    } catch {
-        return null;
-    }
-};
-
-/**
- * Remove user data from local storage
- */
-export const removeUser = (): void => {
-    localStorage.removeItem(USER_KEY);
-};
-
-/**
- * Check if user is authenticated
+ * Check if user is authenticated (has a valid token)
  */
 export const isAuthenticated = (): boolean => {
     const token = getToken();
     if (!token) return false;
     
-    // Check if token is expired
+    // Check if token is expired by parsing the JWT payload
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const expiry = payload.exp * 1000; // Convert to milliseconds
@@ -89,79 +45,10 @@ export const isAuthenticated = (): boolean => {
 };
 
 /**
- * Login and store authentication data
- */
-export const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Login failed' }));
-        throw new Error(error.error || 'Login failed');
-    }
-
-    const data: LoginResponse = await response.json();
-    setToken(data.token);
-    setUser({
-        username: data.username,
-        expiration: data.expiration,
-        roles: data.roles,
-    });
-
-    return data;
-};
-
-/**
  * Logout and clear authentication data
  */
 export const logout = (): void => {
     removeToken();
-    removeUser();
-};
-
-/**
- * Verify current token with server
- */
-export const verifyToken = async (): Promise<boolean> => {
-    const token = getToken();
-    if (!token) return false;
-
-    try {
-        const response = await fetch('/api/v1/auth/verify', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-        return response.ok;
-    } catch {
-        return false;
-    }
-};
-
-/**
- * Get current user info from server
- */
-export const getCurrentUser = async (): Promise<User | null> => {
-    const token = getToken();
-    if (!token) return null;
-
-    try {
-        const response = await fetch('/api/v1/auth/me', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (!response.ok) return null;
-        return await response.json();
-    } catch {
-        return null;
-    }
 };
 
 /**
@@ -173,24 +60,6 @@ export const getAuthHeaders = (): HeadersInit => {
     return {
         'Authorization': `Bearer ${token}`,
     };
-};
-
-/**
- * Check if user has a specific role
- */
-export const hasRole = (role: string): boolean => {
-    const user = getUser();
-    if (!user) return false;
-    return user.roles.includes(role);
-};
-
-/**
- * Check if user has any of the specified roles
- */
-export const hasAnyRole = (roles: string[]): boolean => {
-    const user = getUser();
-    if (!user) return false;
-    return roles.some(role => user.roles.includes(role));
 };
 
 /**
@@ -213,16 +82,9 @@ export const authFetch = async (
     });
 
     // If unauthorized, clear auth data and let the caller handle navigation
-    // The ProtectedRoute component will handle the redirect to login
     if (response.status === 401) {
         logout();
     }
 
     return response;
 };
-
-export const AppRoles = {
-    Admin: 'Admin',
-    ReportViewer: 'ReportViewer',
-    ReportEditor: 'ReportEditor',
-} as const;
