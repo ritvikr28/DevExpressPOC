@@ -24,6 +24,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 AppDomain.CurrentDomain.SetData("DataDirectory", builder.Environment.ContentRootPath);
 builder.Services.AddDevExpressControls();
+
+// Register Azure Blob Storage service
+builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>();
+
 builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 builder.Services.AddMvc();
 builder.Services.AddControllers();

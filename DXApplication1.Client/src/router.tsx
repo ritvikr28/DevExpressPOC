@@ -3,6 +3,7 @@ import Home  from './components/Home';
 import ReportViewer from './components/ReportViewer';
 import ReportDesigner from './components/ReportDesigner';
 import CustomReportDesigner from './components/CustomReportDesigner';
+import ReportManagement from './components/ReportManagement';
 import { App } from './App';
 
 function getBaseUrl() {
@@ -15,5 +16,6 @@ export const router = createBrowserRouter(createRoutesFromElements(
         <Route path="DocumentViewer" element={<ReportViewer hostUrl={getBaseUrl()} />} />
         <Route path="ReportDesigner" element={<ReportDesigner hostUrl={getBaseUrl()} />} />
         <Route path="CustomReportDesigner" element={<CustomReportDesigner hostUrl={getBaseUrl()} />} />
+        <Route path="ReportManagement" element={<ReportManagement />} />
     </Route>
 ));

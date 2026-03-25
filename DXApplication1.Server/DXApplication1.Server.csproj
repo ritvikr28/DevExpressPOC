@@ -10,6 +10,7 @@
     <SpaProxyServerUrl>https://localhost:5173</SpaProxyServerUrl>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="DevExpress.Drawing.Skia" Version="25.2.*" />
     <PackageReference Include="DevExpress.AspNetCore.Reporting" Version="25.2.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.18" />
