@@ -1,6 +1,6 @@
 /**
  * Authentication service for managing JWT tokens from external STS provider
- * Tokens are obtained from: https://simsid-partner-stsserver.azurewebsites.net/
+ * Tokens are obtained from: https://core-part.sims.co.uk
  */
 
 const TOKEN_KEY = 'auth_token';
@@ -28,15 +28,16 @@ export const removeToken = (): void => {
 };
 
 /**
- * Check if user is authenticated (has a valid token)
+ * Check if user is authenticated (has a structurally valid JWT token).
+ * Lifetime validation is intentionally skipped here — the server controls
+ * whether an expired token is accepted (ValidateLifetime on the server side).
  */
 export const isAuthenticated = (): boolean => {
     const token = getToken();
     if (!token) return false;
     
-    // Check if token is expired by parsing the JWT payload
+    // Verify basic JWT structure: must have 3 parts separated by dots
     try {
-        // Validate JWT structure: must have 3 parts separated by dots
         const parts = token.split('.');
         if (parts.length !== 3) {
             return false;
@@ -47,13 +48,9 @@ export const isAuthenticated = (): boolean => {
             return false;
         }
         
-        const payload = JSON.parse(atob(payloadBase64));
-        if (typeof payload.exp !== 'number') {
-            return false;
-        }
-        
-        const expiry = payload.exp * 1000; // Convert to milliseconds
-        return Date.now() < expiry;
+        // Parse to validate the payload is well-formed JSON (result intentionally discarded)
+        JSON.parse(atob(payloadBase64));
+        return true;
     } catch {
         return false;
     }
