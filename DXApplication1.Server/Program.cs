@@ -4,8 +4,10 @@ using DevExpress.Security.Resources;
 using DevExpress.XtraCharts;
 using DevExpress.XtraReports.Web.Extensions;
 using DXApplication1.Data;
+using DXApplication1.Models;
 using DXApplication1.Services;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +16,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +31,87 @@ builder.Services.AddDevExpressControls();
 
 // Register Azure Blob Storage service
 builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>();
+
+// Configure JWT Settings
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
+if (jwtSettings == null)
+{
+    jwtSettings = new JwtSettings
+    {
+        SecretKey = "DefaultDevSecretKey_ReplaceInProduction_MinLength32Chars!",
+        Issuer = "DXApplication1",
+        Audience = "DXApplication1Users",
+        ExpirationMinutes = 60
+    };
+}
+
+// Ensure secret key has minimum length for HMAC-SHA256
+if (string.IsNullOrEmpty(jwtSettings.SecretKey) || jwtSettings.SecretKey.Length < 32)
+{
+    jwtSettings.SecretKey = "DefaultDevSecretKey_ReplaceInProduction_MinLength32Chars!";
+}
+
+builder.Services.Configure<JwtSettings>(options =>
+{
+    options.SecretKey = jwtSettings.SecretKey;
+    options.Issuer = jwtSettings.Issuer;
+    options.Audience = jwtSettings.Audience;
+    options.ExpirationMinutes = jwtSettings.ExpirationMinutes;
+});
+
+// Register Authentication Service
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwtSettings.Audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Authentication failed: {Message}", context.Exception.Message);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            var username = context.Principal?.Identity?.Name;
+            logger.LogDebug("Token validated for user: {Username}", username);
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// Configure Authorization policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole", policy =>
+        policy.RequireRole(AppRoles.Admin));
+
+    options.AddPolicy("RequireReportViewerRole", policy =>
+        policy.RequireRole(AppRoles.ReportViewer, AppRoles.ReportEditor, AppRoles.Admin));
+
+    options.AddPolicy("RequireReportEditorRole", policy =>
+        policy.RequireRole(AppRoles.ReportEditor, AppRoles.Admin));
+});
 
 builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 builder.Services.AddMvc();
@@ -76,6 +161,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// Add Authentication and Authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseDevExpressControls();
 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;

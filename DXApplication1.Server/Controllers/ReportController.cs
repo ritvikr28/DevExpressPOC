@@ -1,6 +1,8 @@
 #nullable enable
 using DevExpress.XtraReports.UI;
+using DXApplication1.Models;
 using DXApplication1.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,6 +15,7 @@ namespace DXApplication1.Controllers
 {
     [ApiController]
     [Route("api/v1/reports")]
+    [Authorize(Policy = "RequireReportViewerRole")]
     public class ReportController : ControllerBase
     {
         private readonly IAzureBlobStorageService _azureBlobStorageService;
@@ -80,6 +83,7 @@ namespace DXApplication1.Controllers
         /// Save a report to Azure Storage
         /// </summary>
         [HttpPost("{reportName}/save-to-azure")]
+        [Authorize(Policy = "RequireReportEditorRole")]
         public async Task<ActionResult> SaveToAzure(string reportName)
         {
             if (!_azureBlobStorageService.IsEnabled)
@@ -107,6 +111,7 @@ namespace DXApplication1.Controllers
         /// Generate multiple reports from templates with different parameters
         /// </summary>
         [HttpPost("generate-multiple")]
+        [Authorize(Policy = "RequireReportEditorRole")]
         public async Task<ActionResult<MultipleReportGenerationResult>> GenerateMultipleReports(
             [FromBody] MultipleReportGenerationRequest request)
         {
@@ -271,6 +276,7 @@ namespace DXApplication1.Controllers
         /// Delete a report from Azure Storage
         /// </summary>
         [HttpDelete("{reportName}/azure")]
+        [Authorize(Policy = "RequireAdminRole")]
         public async Task<ActionResult> DeleteFromAzure(string reportName)
         {
             if (!_azureBlobStorageService.IsEnabled)
