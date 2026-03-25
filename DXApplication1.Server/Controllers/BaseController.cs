@@ -8,6 +8,56 @@ namespace DXApplication1.Server.Controllers
     public class BaseController : ControllerBase
     {
         private readonly string _metadataPath = "Data/columns-metadata.json";
+        private readonly string _connectionsPath = "Data/api-connections.json";
+
+        /// <summary>
+        /// Gets a list of all available data sources.
+        /// </summary>
+        [HttpGet("datasources")]
+        public IActionResult GetDataSources()
+        {
+            if (!System.IO.File.Exists(_connectionsPath))
+                return NotFound("Connections file not found.");
+
+            var json = System.IO.File.ReadAllText(_connectionsPath);
+            using var jsonDoc = JsonDocument.Parse(json);
+
+            var dataSources = jsonDoc.RootElement.EnumerateArray()
+                .Select(item => item.GetProperty("Name").GetString())
+                .Where(name => !string.IsNullOrEmpty(name))
+                .ToList();
+
+            return Ok(dataSources);
+        }
+
+        /// <summary>
+        /// Gets the schema (column metadata) for a specific data source.
+        /// </summary>
+        [HttpGet("schema")]
+        public async Task<IActionResult> GetSchema([FromQuery] string dataSourceName)
+        {
+            if (string.IsNullOrWhiteSpace(dataSourceName))
+                return BadRequest("dataSourceName is required.");
+
+            if (!System.IO.File.Exists(_metadataPath))
+                return NotFound("Metadata file not found.");
+
+            await using var stream = System.IO.File.OpenRead(_metadataPath);
+            var jsonDoc = await JsonDocument.ParseAsync(stream);
+
+            if (!jsonDoc.RootElement.TryGetProperty(dataSourceName, out var columnsElement))
+                return NotFound($"No schema found for '{dataSourceName}'.");
+
+            var columns = columnsElement.EnumerateArray()
+                .Select(col => new
+                {
+                    Name = col.GetProperty("name").GetString(),
+                    Type = col.GetProperty("type").GetString()
+                })
+                .ToList();
+
+            return Ok(columns);
+        }
 
         [HttpGet("column")]
         public async Task<IActionResult> GetColumns([FromQuery] string dataSourceName)
