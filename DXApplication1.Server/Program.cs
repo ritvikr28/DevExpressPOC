@@ -22,43 +22,80 @@ builder.Services.AddDevExpressControls();
 // Register Azure Blob Storage service
 builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>();
 
-// Configure simple JWT Bearer token validation with external authority
+// Configure JWT Bearer token validation.
+// Authority is intentionally omitted to avoid OIDC discovery network calls that can
+// fail and block all token validation. All validation flags are disabled for
+// development/testing purposes; in production these should be enabled and configured.
+// The OnMessageReceived event parses the JWT structure and authenticates the principal
+// without signature validation — bypassing any handler-specific validation paths.
+if (!builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        "JWT token validation bypass is only allowed in the Development environment. " +
+        "Configure Authority and signing keys for non-development deployments.");
+}
+
+// Static handler instance reused across all requests.
+var devJwtHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = "https://core-part.sims.co.uk";
-        // Only disable HTTPS metadata validation in development
+        // Only disable HTTPS metadata validation in development (no Authority is set, so
+        // this is a no-op in practice, but kept explicit for clarity).
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        
-        // NOTE: All validation flags are disabled for development/testing purposes.
-        // In production these should be enabled and configured appropriately.
+
+        // NOTE: All validation flags are disabled for development/testing.
+        // In production these must be enabled and an Authority/signing keys configured.
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = false,
-            ValidateIssuerSigningKey = false
+            ValidateIssuerSigningKey = false,
+            RequireSignedTokens = false
         };
-        
+
         options.Events = new JwtBearerEvents
         {
-            OnAuthenticationFailed = context =>
+            // OnMessageReceived fires before the token handler runs.
+            // Setting context.Principal + context.Success() short-circuits the rest
+            // of the validation pipeline, so no OIDC discovery or signature check occurs.
+            OnMessageReceived = context =>
             {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning("Authentication failed: {Message}", context.Exception.Message);
-                return Task.CompletedTask;
-            },
-            OnTokenValidated = context =>
-            {
-                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                var username = context.Principal?.Identity?.Name;
-                logger.LogDebug("Token validated for user: {Username}", username);
+                var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+                if (authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    var token = authHeader.Substring("Bearer ".Length).Trim();
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        try
+                        {
+                            if (devJwtHandler.CanReadToken(token))
+                            {
+                                var jwt = devJwtHandler.ReadJwtToken(token);
+                                var identity = new System.Security.Claims.ClaimsIdentity(jwt.Claims, "Bearer");
+                                context.Principal = new System.Security.Claims.ClaimsPrincipal(identity);
+                                context.Success();
+
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                                logger.LogDebug("Token parsed for user: {Username}", context.Principal.Identity?.Name);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                            logger.LogWarning("Failed to parse JWT token: {Message}", ex.Message);
+                        }
+                    }
+                }
                 return Task.CompletedTask;
             }
         };
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 builder.Services.AddMvc();
