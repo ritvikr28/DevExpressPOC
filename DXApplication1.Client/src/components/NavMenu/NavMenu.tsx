@@ -1,11 +1,26 @@
-import { Link } from 'react-router-dom';
-import {useState} from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { isAuthenticated, logout } from '../../services/authService';
 
 export default function NavMenu() {
     const [isExpanded, setExpanded] = useState(false);
+    const navigate = useNavigate();
+    const authenticated = isAuthenticated();
 
     const toggle = () => {
         setExpanded(!isExpanded);
+    }
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+        // Force a refresh to show the authentication required message
+        window.location.reload();
+    }
+
+    // Don't show nav menu when not authenticated
+    if (!authenticated) {
+        return null;
     }
 
     return (
@@ -41,6 +56,14 @@ export default function NavMenu() {
                                     <Link className="nav-link text-dark" to="/ReportManagement">Report Management</Link>
                                 </li>
                             </ul>
+                            <div className="navbar-nav ms-auto">
+                                <button 
+                                    className="btn btn-outline-secondary btn-sm"
+                                    onClick={handleLogout}
+                                >
+                                    Logout
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </nav>

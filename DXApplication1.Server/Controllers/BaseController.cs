@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
 namespace DXApplication1.Server.Controllers
 {
     [Route("api/v1")]
     [ApiController]
+    [Authorize]
     public class BaseController : ControllerBase
     {
         private readonly string _metadataPath = "Data/columns-metadata.json";

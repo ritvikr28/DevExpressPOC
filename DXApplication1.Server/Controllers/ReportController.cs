@@ -1,6 +1,7 @@
 #nullable enable
 using DevExpress.XtraReports.UI;
 using DXApplication1.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -13,6 +14,7 @@ namespace DXApplication1.Controllers
 {
     [ApiController]
     [Route("api/v1/reports")]
+    [Authorize]
     public class ReportController : ControllerBase
     {
         private readonly IAzureBlobStorageService _azureBlobStorageService;

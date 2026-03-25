@@ -3,21 +3,15 @@ using DevExpress.AspNetCore.Reporting;
 using DevExpress.Security.Resources;
 using DevExpress.XtraCharts;
 using DevExpress.XtraReports.Web.Extensions;
-using DXApplication1.Data;
 using DXApplication1.Services;
-using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +21,43 @@ builder.Services.AddDevExpressControls();
 
 // Register Azure Blob Storage service
 builder.Services.AddSingleton<IAzureBlobStorageService, AzureBlobStorageService>();
+
+// Configure simple JWT Bearer token validation with external authority
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = "https://simsid-partner-stsserver.azurewebsites.net/";
+        
+        // Configure token validation parameters for security
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+            // Note: ValidAudience should be configured based on your STS configuration
+            // ValidAudience = "your-api-audience"
+        };
+        
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("Authentication failed: {Message}", context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                var username = context.Principal?.Identity?.Name;
+                logger.LogDebug("Token validated for user: {Username}", username);
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 builder.Services.AddMvc();
@@ -76,6 +107,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+// Add Authentication and Authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseDevExpressControls();
 System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;

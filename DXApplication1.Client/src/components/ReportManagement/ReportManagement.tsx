@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { authFetch } from '../../services/authService';
 import './ReportManagement.css';
 
 interface ReportInfo {
@@ -57,8 +58,8 @@ export default function ReportManagement() {
         setError(null);
         try {
             const [reportsRes, azureRes] = await Promise.all([
-                fetch('/api/v1/reports'),
-                fetch('/api/v1/reports/azure-status')
+                authFetch('/api/v1/reports'),
+                authFetch('/api/v1/reports/azure-status')
             ]);
 
             if (reportsRes.ok) {
@@ -80,7 +81,7 @@ export default function ReportManagement() {
 
     const saveToAzureStorage = async (reportName: string) => {
         try {
-            const response = await fetch(`/api/v1/reports/${reportName}/save-to-azure`, {
+            const response = await authFetch(`/api/v1/reports/${reportName}/save-to-azure`, {
                 method: 'POST'
             });
 
@@ -108,7 +109,7 @@ export default function ReportManagement() {
         }
 
         try {
-            const response = await fetch(`/api/v1/reports/${reportName}/azure`, {
+            const response = await authFetch(`/api/v1/reports/${reportName}/azure`, {
                 method: 'DELETE'
             });
 
@@ -132,7 +133,7 @@ export default function ReportManagement() {
 
     const exportReport = async (reportName: string, format: string) => {
         try {
-            const response = await fetch(`/api/v1/reports/${reportName}/export?format=${format}&saveToAzure=${saveToAzure}`);
+            const response = await authFetch(`/api/v1/reports/${reportName}/export?format=${format}&saveToAzure=${saveToAzure}`);
 
             if (response.ok) {
                 const blob = await response.blob();
@@ -183,7 +184,7 @@ export default function ReportManagement() {
         setError(null);
 
         try {
-            const response = await fetch('/api/v1/reports/generate-multiple', {
+            const response = await authFetch('/api/v1/reports/generate-multiple', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
