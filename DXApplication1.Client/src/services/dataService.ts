@@ -253,7 +253,10 @@ export class DataSelectionManager {
     }
 
     /**
-     * Get all selections as a request object for the multi-source API
+     * Get all selections as a request object for the multi-source API.
+     * 
+     * Note: Only data sources with at least one selected column are included
+     * in the returned request. Data sources with no columns selected are filtered out.
      */
     toRequest(): MultiSourceDataRequest {
         const sources: DataSourceRequest[] = [];

@@ -16,11 +16,15 @@ namespace DXApplication1.Server.Controllers
     [ApiController]
     public class DataController : ControllerBase
     {
+        // TODO: Consider moving to configuration (e.g., appsettings.json) for environment flexibility
         private static readonly string ColumnsMetadataPath = "Data/columns-metadata.json";
 
         /// <summary>
         /// Maps data source name to the corresponding JSON data file path (case-insensitive).
         /// </summary>
+        /// <remarks>
+        /// TODO: Consider moving data source mappings to configuration to allow adding new sources without code changes.
+        /// </remarks>
         private static string? GetDataFilePath(string dataSourceName)
         {
             return dataSourceName.ToLowerInvariant() switch

@@ -293,7 +293,7 @@ export default function DataSourceSelector() {
         <div className="data-source-selector container-fluid">
             <h2>Data Source Selector</h2>
             <p className="lead">
-                Select data sources and columns, then click Preview to fetch the data.
+                Select data sources and columns, then click Preview to see the data, or Open in Report Designer to design a report with the selected sources.
             </p>
 
             {error && (
