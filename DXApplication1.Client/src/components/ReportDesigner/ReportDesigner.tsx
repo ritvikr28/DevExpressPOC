@@ -6,6 +6,10 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { getToken } from '../../services/authService';
 import './ReportDesigner.css';
 
+// Height constants for the designer component
+const NAVBAR_HEIGHT = 90; // Main navbar height in pixels
+const BANNER_HEIGHT = 50; // Data sources banner height in pixels
+
 export default function ReportDesigner(props: { hostUrl: string }) {
     const [searchParams] = useSearchParams();
     const getDesignerModelAction: string = 'DXXRD/GetDesignerModel';
@@ -17,6 +21,11 @@ export default function ReportDesigner(props: { hostUrl: string }) {
         const sourcesParam = searchParams.get('dataSources');
         return sourcesParam ? sourcesParam.split(',').filter(s => s.trim()) : [];
     }, [searchParams]);
+    
+    // Calculate designer height based on whether banner is shown
+    const designerHeight = selectedDataSources.length > 0 
+        ? `calc(100vh - ${NAVBAR_HEIGHT + BANNER_HEIGHT}px)` 
+        : `calc(100vh - ${NAVBAR_HEIGHT}px)`;
     
     // BeforeRender fires before the DevExpress designer makes any HTTP requests,
     // so this is the correct place to ensure the Authorization header is set.
@@ -51,7 +60,7 @@ export default function ReportDesigner(props: { hostUrl: string }) {
                 </div>
             )}
             
-            <DxReportDesigner reportUrl={reportUrl} height={selectedDataSources.length > 0 ? "calc(100vh - 140px)" : "calc(100vh - 90px)"} developmentMode={true}>
+            <DxReportDesigner reportUrl={reportUrl} height={designerHeight} developmentMode={true}>
                 <RequestOptions host={props.hostUrl} getLocalizationAction={getLocalizationAction} getDesignerModelAction={getDesignerModelAction} />
                 <Callbacks BeforeRender={onBeforeRender}></Callbacks>
                 <DesignerModelSettings>
