@@ -142,9 +142,10 @@ export default function DataSourceSelector() {
             return;
         }
 
-        // Pass selected data sources as query parameter
+        // Pass selected data sources as query parameter and use MultiSourceReport which has all data sources configured
         const params = new URLSearchParams();
         params.set('dataSources', selectedSources.join(','));
+        params.set('reportUrl', 'MultiSourceReport'); // Use the multi-source report template
         
         navigate(`/ReportDesigner?${params.toString()}`);
     };
