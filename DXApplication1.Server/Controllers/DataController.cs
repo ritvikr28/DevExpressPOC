@@ -20,8 +20,9 @@ namespace DXApplication1.Server.Controllers
         /// Referenced by Data/api-connections.json connection strings and called by DevExpress
         /// server-side infrastructure when rendering reports in both the designer and viewer.
         /// </summary>
-        [HttpGet("data")]
-        [SecurityDomain(["NG.Homepage.Access1"], Operation.View)]
+        [HttpGet]
+        [Route("data")]
+        [SecurityDomain(["NG.Homepage.Access"], Operation.View)]
         public async Task<IActionResult> GetData(
             [FromQuery] string dataSourceName,
             [FromQuery] string[] columns)

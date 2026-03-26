@@ -16,7 +16,7 @@ using System.Collections.Generic;
 
 namespace DXApplication1.Controllers
 {
-    [SecurityDomain(["NG.Homepage.Access1"], Operation.View)]
+    [SecurityDomain(["NG.Homepage.Access"], Operation.View)]
     public class CustomWebDocumentViewerController : WebDocumentViewerController
     {
         public CustomWebDocumentViewerController(IWebDocumentViewerMvcControllerService controllerService) : base(controllerService)
@@ -24,7 +24,7 @@ namespace DXApplication1.Controllers
         }
     }
 
-    [SecurityDomain(["NG.Homepage.Access1"], Operation.View)]
+    [SecurityDomain(["NG.Homepage.Access"], Operation.View)]
     public class CustomReportDesignerController : ReportDesignerController
     {
         public CustomReportDesignerController(IReportDesignerMvcControllerService controllerService) : base(controllerService)
@@ -49,7 +49,7 @@ namespace DXApplication1.Controllers
         }
     }
 
-    [SecurityDomain(["NG.Homepage.Access1"], Operation.View)]
+    [SecurityDomain(["NG.Homepage.Access"], Operation.View)]
     public class CustomQueryBuilderController : QueryBuilderController
     {
         public CustomQueryBuilderController(IQueryBuilderMvcControllerService controllerService) : base(controllerService)
