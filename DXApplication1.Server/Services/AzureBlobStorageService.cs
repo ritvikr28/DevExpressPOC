@@ -6,19 +6,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace DXApplication1.Services
 {
     public interface IAzureBlobStorageService
     {
-        Task<bool> UploadReportAsync(string reportName, Stream reportStream);
-        Task<Stream?> DownloadReportAsync(string reportName);
-        Task<List<string>> ListReportsAsync();
-        Task<bool> DeleteReportAsync(string reportName);
-        Task<bool> ReportExistsAsync(string reportName);
-        bool IsEnabled { get; }
-
         // Synchronous methods for compatibility with DevExpress ReportStorageWebExtension
         bool UploadReportSync(string reportName, Stream reportStream);
         Stream? DownloadReportSync(string reportName);
@@ -27,11 +19,8 @@ namespace DXApplication1.Services
 
     public class AzureBlobStorageService : IAzureBlobStorageService
     {
-        private readonly BlobContainerClient? _containerClient;
+        private readonly BlobContainerClient _containerClient;
         private readonly ILogger<AzureBlobStorageService> _logger;
-        private readonly bool _isEnabled;
-
-        public bool IsEnabled => _isEnabled;
 
         public AzureBlobStorageService(IConfiguration configuration, ILogger<AzureBlobStorageService> logger)
         {
@@ -42,9 +31,8 @@ namespace DXApplication1.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                _logger.LogWarning("Azure Storage connection string is not configured. Azure storage will be disabled.");
-                _isEnabled = false;
-                return;
+                throw new InvalidOperationException(
+                    "Azure Storage connection string is not configured. Set 'AzureStorage:ConnectionString' in configuration.");
             }
 
             try
@@ -52,139 +40,11 @@ namespace DXApplication1.Services
                 var blobServiceClient = new BlobServiceClient(connectionString);
                 _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
                 _containerClient.CreateIfNotExists(PublicAccessType.None);
-                _isEnabled = true;
                 _logger.LogInformation("Azure Blob Storage service initialized successfully. Container: {ContainerName}", containerName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize Azure Blob Storage service");
-                _isEnabled = false;
-            }
-        }
-
-        public async Task<bool> UploadReportAsync(string reportName, Stream reportStream)
-        {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot upload report: {ReportName}", reportName);
-                return false;
-            }
-
-            try
-            {
-                var blobName = GetBlobName(reportName);
-                var blobClient = _containerClient.GetBlobClient(blobName);
-
-                reportStream.Position = 0;
-                await blobClient.UploadAsync(reportStream, overwrite: true);
-
-                _logger.LogInformation("Report uploaded successfully to Azure: {ReportName}", reportName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to upload report to Azure: {ReportName}", reportName);
-                return false;
-            }
-        }
-
-        public async Task<Stream?> DownloadReportAsync(string reportName)
-        {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot download report: {ReportName}", reportName);
-                return null;
-            }
-
-            try
-            {
-                var blobName = GetBlobName(reportName);
-                var blobClient = _containerClient.GetBlobClient(blobName);
-
-                if (!await blobClient.ExistsAsync())
-                {
-                    _logger.LogWarning("Report not found in Azure: {ReportName}", reportName);
-                    return null;
-                }
-
-                var memoryStream = new MemoryStream();
-                await blobClient.DownloadToAsync(memoryStream);
-                memoryStream.Position = 0;
-
-                return memoryStream;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to download report from Azure: {ReportName}", reportName);
-                return null;
-            }
-        }
-
-        public async Task<List<string>> ListReportsAsync()
-        {
-            var reports = new List<string>();
-
-            if (!_isEnabled || _containerClient == null)
-            {
-                return reports;
-            }
-
-            try
-            {
-                await foreach (var blobItem in _containerClient.GetBlobsAsync())
-                {
-                    var reportName = Path.GetFileNameWithoutExtension(blobItem.Name);
-                    reports.Add(reportName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to list reports from Azure");
-            }
-
-            return reports;
-        }
-
-        public async Task<bool> DeleteReportAsync(string reportName)
-        {
-            if (!_isEnabled || _containerClient == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                var blobName = GetBlobName(reportName);
-                var blobClient = _containerClient.GetBlobClient(blobName);
-                await blobClient.DeleteIfExistsAsync();
-
-                _logger.LogInformation("Report deleted from Azure: {ReportName}", reportName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to delete report from Azure: {ReportName}", reportName);
-                return false;
-            }
-        }
-
-        public async Task<bool> ReportExistsAsync(string reportName)
-        {
-            if (!_isEnabled || _containerClient == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                var blobName = GetBlobName(reportName);
-                var blobClient = _containerClient.GetBlobClient(blobName);
-                return await blobClient.ExistsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to check if report exists in Azure: {ReportName}", reportName);
-                return false;
+                throw new InvalidOperationException("Failed to initialize Azure Blob Storage service.", ex);
             }
         }
 
@@ -199,12 +59,6 @@ namespace DXApplication1.Services
 
         public bool UploadReportSync(string reportName, Stream reportStream)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot upload report: {ReportName}", reportName);
-                return false;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -225,12 +79,6 @@ namespace DXApplication1.Services
 
         public Stream? DownloadReportSync(string reportName)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot download report: {ReportName}", reportName);
-                return null;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -259,11 +107,6 @@ namespace DXApplication1.Services
         {
             var reports = new List<string>();
 
-            if (!_isEnabled || _containerClient == null)
-            {
-                return reports;
-            }
-
             try
             {
                 foreach (var blobItem in _containerClient.GetBlobs())
@@ -281,3 +124,4 @@ namespace DXApplication1.Services
         }
     }
 }
+

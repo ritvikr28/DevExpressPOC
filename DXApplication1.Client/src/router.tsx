@@ -2,8 +2,6 @@ import { createBrowserRouter, createRoutesFromElements, Route } from "react-rout
 import Home  from './components/Home';
 import ReportViewer from './components/ReportViewer';
 import ReportDesigner from './components/ReportDesigner';
-import CustomReportDesigner from './components/CustomReportDesigner';
-import ReportManagement from './components/ReportManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { App } from './App';
 
@@ -26,16 +24,6 @@ export const router = createBrowserRouter(createRoutesFromElements(
         <Route path="ReportDesigner" element={
             <ProtectedRoute>
                 <ReportDesigner hostUrl={getBaseUrl()} />
-            </ProtectedRoute>
-        } />
-        <Route path="CustomReportDesigner" element={
-            <ProtectedRoute>
-                <CustomReportDesigner hostUrl={getBaseUrl()} />
-            </ProtectedRoute>
-        } />
-        <Route path="ReportManagement" element={
-            <ProtectedRoute>
-                <ReportManagement />
             </ProtectedRoute>
         } />
     </Route>
