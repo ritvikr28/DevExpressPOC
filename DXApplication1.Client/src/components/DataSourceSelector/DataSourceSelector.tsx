@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     getDataSources,
     getMultiSourceData,
@@ -20,6 +21,7 @@ interface DataPreview {
 }
 
 export default function DataSourceSelector() {
+    const navigate = useNavigate();
     const [dataSources, setDataSources] = useState<DataSourceSchema[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -117,6 +119,34 @@ export default function DataSourceSelector() {
 
     const hasAnySelection = (): boolean => {
         return Object.values(columnSelections).some(cols => cols.size > 0);
+    };
+
+    /**
+     * Gets list of data source names that have at least one column selected
+     */
+    const getSelectedDataSourceNames = (): string[] => {
+        return Object.entries(columnSelections)
+            .filter(([, columns]) => columns.size > 0)
+            .map(([name]) => name);
+    };
+
+    /**
+     * Opens the Report Designer with the selected data sources.
+     * DevExpress will natively fetch data from each selected source when Preview is clicked.
+     */
+    const handleOpenInReportDesigner = () => {
+        const selectedSources = getSelectedDataSourceNames();
+        
+        if (selectedSources.length === 0) {
+            setError('Please select at least one column from at least one data source');
+            return;
+        }
+
+        // Pass selected data sources as query parameter
+        const params = new URLSearchParams();
+        params.set('dataSources', selectedSources.join(','));
+        
+        navigate(`/ReportDesigner?${params.toString()}`);
     };
 
     const handlePreview = async () => {
@@ -301,20 +331,32 @@ export default function DataSourceSelector() {
                             )}
                         </div>
                         <div className="card-footer">
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={handlePreview}
-                                disabled={previewing || !hasAnySelection()}
-                            >
-                                {previewing ? 'Loading...' : 'Preview Data'}
-                            </button>
-                            
-                            {!hasAnySelection() && (
-                                <span className="text-muted ms-2">
-                                    Select columns to enable preview
-                                </span>
-                            )}
+                            <div className="d-flex flex-wrap gap-2 align-items-center">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={handlePreview}
+                                    disabled={previewing || !hasAnySelection()}
+                                >
+                                    {previewing ? 'Loading...' : 'Preview Data'}
+                                </button>
+                                
+                                <button
+                                    type="button"
+                                    className="btn btn-success"
+                                    onClick={handleOpenInReportDesigner}
+                                    disabled={!hasAnySelection()}
+                                    title="Open selected data sources in Report Designer. DevExpress will fetch data from each source when you click Preview."
+                                >
+                                    Open in Report Designer
+                                </button>
+                                
+                                {!hasAnySelection() && (
+                                    <span className="text-muted ms-2">
+                                        Select columns to enable actions
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
