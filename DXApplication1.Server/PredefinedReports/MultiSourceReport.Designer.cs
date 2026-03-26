@@ -52,12 +52,76 @@ namespace DXApplication1.PredefinedReports
             infoLabel.Font = new Font("Arial", 10F, FontStyle.Italic);
             this.ReportHeader.Controls.Add(infoLabel);
 
-            // Detail band
+            // ======================================================================
+            // PUPIL SECTION - Bound to the primary DataSource (PupilDataSource)
+            // ======================================================================
+            
+            // Pupil Group Header Band
+            this.PupilGroupHeader = new GroupHeaderBand();
+            this.PupilGroupHeader.HeightF = 50F;
+            this.PupilGroupHeader.Name = "PupilGroupHeader";
+            this.PupilGroupHeader.RepeatEveryPage = true;
+            
+            var pupilSectionLabel = new XRLabel();
+            pupilSectionLabel.Text = "PUPILS";
+            pupilSectionLabel.SizeF = new SizeF(650F, 25F);
+            pupilSectionLabel.LocationF = new PointF(0F, 0F);
+            pupilSectionLabel.Font = new Font("Arial", 14F, FontStyle.Bold);
+            pupilSectionLabel.BackColor = Color.LightBlue;
+            this.PupilGroupHeader.Controls.Add(pupilSectionLabel);
+            
+            // Pupil table header row
+            var pupilHeaderTable = new XRTable();
+            pupilHeaderTable.LocationF = new PointF(0F, 25F);
+            pupilHeaderTable.SizeF = new SizeF(650F, 25F);
+            pupilHeaderTable.Name = "PupilHeaderTable";
+            
+            var pupilHeaderRow = new XRTableRow();
+            pupilHeaderRow.HeightF = 25F;
+            
+            var pupilIdHeader = new XRTableCell { Text = "Pupil ID", Font = new Font("Arial", 10F, FontStyle.Bold), BackColor = Color.LightGray };
+            var firstNameHeader = new XRTableCell { Text = "First Name", Font = new Font("Arial", 10F, FontStyle.Bold), BackColor = Color.LightGray };
+            var lastNameHeader = new XRTableCell { Text = "Last Name", Font = new Font("Arial", 10F, FontStyle.Bold), BackColor = Color.LightGray };
+            var dobHeader = new XRTableCell { Text = "Date of Birth", Font = new Font("Arial", 10F, FontStyle.Bold), BackColor = Color.LightGray };
+            var classHeader = new XRTableCell { Text = "Class", Font = new Font("Arial", 10F, FontStyle.Bold), BackColor = Color.LightGray };
+            
+            pupilHeaderRow.Cells.AddRange(new XRTableCell[] { pupilIdHeader, firstNameHeader, lastNameHeader, dobHeader, classHeader });
+            pupilHeaderTable.Rows.Add(pupilHeaderRow);
+            this.PupilGroupHeader.Controls.Add(pupilHeaderTable);
+
+            // Detail band - Pupil data row (iterates over primary DataSource)
             this.Detail = new DetailBand();
             this.Detail.HeightF = 25F;
             this.Detail.Name = "Detail";
+            
+            var pupilDataTable = new XRTable();
+            pupilDataTable.LocationF = new PointF(0F, 0F);
+            pupilDataTable.SizeF = new SizeF(650F, 25F);
+            pupilDataTable.Name = "PupilDataTable";
+            
+            var pupilDataRow = new XRTableRow();
+            pupilDataRow.HeightF = 25F;
+            
+            var pupilIdCell = new XRTableCell();
+            pupilIdCell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", "[PupilId]"));
+            
+            var firstNameCell = new XRTableCell();
+            firstNameCell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", "[FirstName]"));
+            
+            var lastNameCell = new XRTableCell();
+            lastNameCell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", "[LastName]"));
+            
+            var dobCell = new XRTableCell();
+            dobCell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", "[DateOfBirth]"));
+            
+            var classCell = new XRTableCell();
+            classCell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", "[Class]"));
+            
+            pupilDataRow.Cells.AddRange(new XRTableCell[] { pupilIdCell, firstNameCell, lastNameCell, dobCell, classCell });
+            pupilDataTable.Rows.Add(pupilDataRow);
+            this.Detail.Controls.Add(pupilDataTable);
 
-            // Page Footer with instructions
+            // Page Footer with page info
             this.PageFooter = new PageFooterBand();
             this.PageFooter.HeightF = 50F;
             this.PageFooter.Name = "PageFooter";
@@ -68,10 +132,11 @@ namespace DXApplication1.PredefinedReports
             pageInfo.SizeF = new SizeF(300F, 20F);
             this.PageFooter.Controls.Add(pageInfo);
 
-            // Configure report
+            // Configure report bands
             this.Bands.AddRange(new Band[] {
                 this.TopMargin,
                 this.ReportHeader,
+                this.PupilGroupHeader,
                 this.Detail,
                 this.PageFooter,
                 this.BottomMargin
@@ -87,6 +152,7 @@ namespace DXApplication1.PredefinedReports
         private TopMarginBand TopMargin;
         private BottomMarginBand BottomMargin;
         private ReportHeaderBand ReportHeader;
+        private GroupHeaderBand PupilGroupHeader;
         private DetailBand Detail;
         private PageFooterBand PageFooter;
     }
