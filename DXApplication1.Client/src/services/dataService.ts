@@ -162,7 +162,21 @@ export interface DataSourceSelection {
 }
 
 /**
- * Helper class to manage column selection state
+ * Helper class to manage column selection state across multiple data sources.
+ * 
+ * This class tracks which columns are selected for each data source and can
+ * generate a MultiSourceDataRequest object for the API.
+ * 
+ * @example
+ * const manager = new DataSelectionManager();
+ * manager.addDataSource('Pupil');
+ * manager.toggleColumn('Pupil', 'PupilId');
+ * manager.toggleColumn('Pupil', 'FirstName');
+ * manager.addDataSource('Staff');
+ * manager.setColumns('Staff', ['StaffId', 'Role']);
+ * 
+ * const request = manager.toRequest();
+ * const response = await getMultiSourceData(request);
  */
 export class DataSelectionManager {
     private selections: Map<string, Set<string>> = new Map();
@@ -202,17 +216,26 @@ export class DataSelectionManager {
     }
 
     /**
-     * Clear all selections for a data source
+     * Clear all column selections for a data source (keeps the data source in the map)
      */
     clearDataSource(dataSourceName: string): void {
+        this.selections.set(dataSourceName, new Set());
+    }
+
+    /**
+     * Remove a data source entirely from selection tracking
+     */
+    removeDataSource(dataSourceName: string): void {
         this.selections.delete(dataSourceName);
     }
 
     /**
-     * Clear all selections
+     * Clear all selections for all data sources
      */
     clearAll(): void {
-        this.selections.clear();
+        for (const key of this.selections.keys()) {
+            this.selections.set(key, new Set());
+        }
     }
 
     /**
@@ -230,7 +253,7 @@ export class DataSelectionManager {
     }
 
     /**
-     * Get all selections as a request object
+     * Get all selections as a request object for the multi-source API
      */
     toRequest(): MultiSourceDataRequest {
         const sources: DataSourceRequest[] = [];
@@ -264,7 +287,7 @@ export class DataSelectionManager {
     }
 
     /**
-     * Check if any columns are selected
+     * Check if any columns are selected across all data sources
      */
     hasSelections(): boolean {
         for (const columns of this.selections.values()) {

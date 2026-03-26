@@ -70,7 +70,7 @@ namespace DXApplication1.Server.Controllers
         private IActionResult? ValidateMetadataFileExists()
         {
             if (!System.IO.File.Exists(ColumnsMetadataPath))
-                return NotFound("Columns metadata file not found.");
+                return NotFound($"Columns metadata file not found: {ColumnsMetadataPath}");
             return null;
         }
 
@@ -82,8 +82,11 @@ namespace DXApplication1.Server.Controllers
             IEnumerable<string>? columns)
         {
             var fileName = GetDataFilePath(dataSourceName);
-            if (fileName == null || !System.IO.File.Exists(fileName))
-                return (null, $"Data file not found for data source '{dataSourceName}'.");
+            if (fileName == null)
+                return (null, $"Data source '{dataSourceName}' is not recognized.");
+            
+            if (!System.IO.File.Exists(fileName))
+                return (null, $"Data file not found for data source '{dataSourceName}': {fileName}");
 
             using var dataStream = System.IO.File.OpenRead(fileName);
             var dataDoc = await JsonDocument.ParseAsync(dataStream);
