@@ -47,13 +47,7 @@ export default function NavMenu() {
                                     <Link className="nav-link text-dark" to="/ReportDesigner">Report Designer</Link>
                                 </li>
                                 <li className="nav-item">
-                                    <Link className="nav-link text-dark" to="/CustomReportDesigner">Custom Report Designer</Link>
-                                </li>
-                                <li className="nav-item">
                                     <Link className="nav-link text-dark" to="/DocumentViewer">Document Viewer</Link>
-                                </li>
-                                <li className="nav-item">
-                                    <Link className="nav-link text-dark" to="/ReportManagement">Report Management</Link>
                                 </li>
                             </ul>
                             <div className="navbar-nav ms-auto">
