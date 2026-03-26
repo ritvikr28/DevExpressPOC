@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            DevExpress.DataAccess.Sql.SelectQuery selectQuery1 = new DevExpress.DataAccess.Sql.SelectQuery();
+            //DevExpress.DataAccess.Sql.SelectQuery selectQuery1 = new DevExpress.DataAccess.Sql.SelectQuery();
             DevExpress.DataAccess.Sql.Column column1 = new DevExpress.DataAccess.Sql.Column();
             DevExpress.DataAccess.Sql.ColumnExpression columnExpression1 = new DevExpress.DataAccess.Sql.ColumnExpression();
             DevExpress.DataAccess.Sql.Table table4 = new DevExpress.DataAccess.Sql.Table();
@@ -76,7 +76,6 @@
             this.pictureBox3 = new DevExpress.XtraReports.UI.XRPictureBox();
             this.GroupFooter1 = new DevExpress.XtraReports.UI.GroupFooterBand();
             this.label2 = new DevExpress.XtraReports.UI.XRLabel();
-            this.sqlDataSource1 = new DevExpress.DataAccess.Sql.SqlDataSource(this.components);
             this.Title = new DevExpress.XtraReports.UI.XRControlStyle();
             this.GroupCaption1 = new DevExpress.XtraReports.UI.XRControlStyle();
             this.GroupData1 = new DevExpress.XtraReports.UI.XRControlStyle();
@@ -361,38 +360,32 @@
             // 
             // sqlDataSource1
             // 
-            this.sqlDataSource1.ConnectionName = "NWindConnectionString";
-            this.sqlDataSource1.Name = "sqlDataSource1";
-            columnExpression1.ColumnName = "CategoryID";
-            table4.Name = "Categories";
-            columnExpression1.Table = table4;
-            column1.Expression = columnExpression1;
-            columnExpression2.ColumnName = "CategoryName";
-            columnExpression2.Table = table4;
-            column2.Expression = columnExpression2;
-            columnExpression3.ColumnName = "Description";
-            columnExpression3.Table = table4;
-            column3.Expression = columnExpression3;
-            columnExpression4.ColumnName = "Picture";
-            columnExpression4.Table = table4;
-            column4.Expression = columnExpression4;
-            columnExpression5.ColumnName = "Icon17";
-            columnExpression5.Table = table4;
-            column5.Expression = columnExpression5;
-            columnExpression6.ColumnName = "Icon25";
-            columnExpression6.Table = table4;
-            column6.Expression = columnExpression6;
-            selectQuery1.Columns.Add(column1);
-            selectQuery1.Columns.Add(column2);
-            selectQuery1.Columns.Add(column3);
-            selectQuery1.Columns.Add(column4);
-            selectQuery1.Columns.Add(column5);
-            selectQuery1.Columns.Add(column6);
-            selectQuery1.Name = "Categories";
-            selectQuery1.Tables.Add(table4);
-            this.sqlDataSource1.Queries.AddRange(new DevExpress.DataAccess.Sql.SqlQuery[] {
-            selectQuery1});
-            this.sqlDataSource1.ResultSchemaSerializable = resources.GetString("sqlDataSource1.ResultSchemaSerializable");
+            //this.sqlDataSource1.ConnectionName = "NWindConnectionString";
+            //this.sqlDataSource1.Name = "sqlDataSource1";
+            //columnExpression1.ColumnName = "CategoryID";
+            //table4.Name = "Categories";
+            //columnExpression1.Table = table4;
+            //column1.Expression = columnExpression1;
+            //columnExpression2.ColumnName = "CategoryName";
+            //columnExpression2.Table = table4;
+            //column2.Expression = columnExpression2;
+            //columnExpression3.ColumnName = "Description";
+            //columnExpression3.Table = table4;
+            //column3.Expression = columnExpression3;
+            //columnExpression4.ColumnName = "Picture";
+            //columnExpression4.Table = table4;
+            //column4.Expression = columnExpression4;
+            //columnExpression5.ColumnName = "Icon17";
+            //columnExpression5.Table = table4;
+            //column5.Expression = columnExpression5;
+            //columnExpression6.ColumnName = "Icon25";
+            //columnExpression6.Table = table4;
+            //column6.Expression = columnExpression6;
+            //selectQuery1.Name = "Categories";
+            //selectQuery1.Tables.Add(table4);
+            //this.sqlDataSource1.Queries.AddRange(new DevExpress.DataAccess.Sql.SqlQuery[] {
+            //selectQuery1});
+            //this.sqlDataSource1.ResultSchemaSerializable = resources.GetString("sqlDataSource1.ResultSchemaSerializable");
             // 
             // Title
             // 

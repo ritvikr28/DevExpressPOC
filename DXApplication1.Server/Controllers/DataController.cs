@@ -1,4 +1,6 @@
 #nullable enable
+using ESS.Platform.Authorization.Attributes;
+using ESS.Platform.Authorization.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -11,7 +13,6 @@ namespace DXApplication1.Server.Controllers
 {
     [Route("api/v1")]
     [ApiController]
-    [Authorize]
     public class DataController : ControllerBase
     {
         /// <summary>
@@ -20,6 +21,7 @@ namespace DXApplication1.Server.Controllers
         /// server-side infrastructure when rendering reports in both the designer and viewer.
         /// </summary>
         [HttpGet("data")]
+        [SecurityDomain(["NG.Homepage.Access1"], Operation.View)]
         public async Task<IActionResult> GetData(
             [FromQuery] string dataSourceName,
             [FromQuery] string[] columns)
