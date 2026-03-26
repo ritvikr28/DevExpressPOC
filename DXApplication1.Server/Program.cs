@@ -105,18 +105,6 @@ builder.Services.ConfigureReportingServices(configurator =>
     if (builder.Environment.IsDevelopment())
         configurator.UseDevelopmentMode();
 
-    //configurator.ConfigureReportDesigner(designerConfigurator =>
-    //{
-
-    //    designerConfigurator.RegisterDataSourceWizardConnectionStringsProvider<CustomSqlDataSourceWizardConnectionStringsProvider>();
-    //    designerConfigurator.RegisterDataSourceWizardJsonConnectionStorage<CustomDataSourceWizardJsonDataConnectionStorage>(true);
-    //});
-    //configurator.ConfigureWebDocumentViewer(viewerConfigurator =>
-    //{
-    //    viewerConfigurator.UseCachedReportSourceBuilder();
-    //    viewerConfigurator.RegisterJsonDataConnectionProviderFactory<CustomJsonDataConnectionProviderFactory>();
-    //    viewerConfigurator.RegisterConnectionProviderFactory<CustomSqlDataConnectionProviderFactory>();
-    //});
     configurator.ConfigureReportDesigner(designerConfigurator =>
     {
         // Register your API-based connection provider for the designer
@@ -132,11 +120,6 @@ builder.Services.ConfigureReportingServices(configurator =>
 //builder.Services.AddDbContext<ReportDbContext>(options => options.UseSqlite(builder.Configuration.GetConnectionString("ReportsDataConnectionString")));
 
 var app = builder.Build();
-//using (var scope = app.Services.CreateScope())
-//{
-//    var services = scope.ServiceProvider;
-//    services.GetService<ReportDbContext>().InitializeDatabase();
-//}
 var contentDirectoryAllowRule = DirectoryAccessRule.Allow(new DirectoryInfo(Path.Combine(app.Environment.ContentRootPath, "Content")).FullName);
 AccessSettings.ReportingSpecificResources.SetRules(contentDirectoryAllowRule, UrlAccessRule.Deny());
 DevExpress.XtraReports.Configuration.Settings.Default.UserDesignerOptions.DataBindingMode = DevExpress.XtraReports.UI.DataBindingMode.Expressions;
