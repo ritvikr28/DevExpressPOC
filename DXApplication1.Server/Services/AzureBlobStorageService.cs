@@ -17,7 +17,6 @@ namespace DXApplication1.Services
         Task<List<string>> ListReportsAsync();
         Task<bool> DeleteReportAsync(string reportName);
         Task<bool> ReportExistsAsync(string reportName);
-        bool IsEnabled { get; }
 
         // Synchronous methods for compatibility with DevExpress ReportStorageWebExtension
         bool UploadReportSync(string reportName, Stream reportStream);
@@ -27,11 +26,8 @@ namespace DXApplication1.Services
 
     public class AzureBlobStorageService : IAzureBlobStorageService
     {
-        private readonly BlobContainerClient? _containerClient;
+        private readonly BlobContainerClient _containerClient;
         private readonly ILogger<AzureBlobStorageService> _logger;
-        private readonly bool _isEnabled;
-
-        public bool IsEnabled => _isEnabled;
 
         public AzureBlobStorageService(IConfiguration configuration, ILogger<AzureBlobStorageService> logger)
         {
@@ -42,9 +38,8 @@ namespace DXApplication1.Services
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                _logger.LogWarning("Azure Storage connection string is not configured. Azure storage will be disabled.");
-                _isEnabled = false;
-                return;
+                throw new InvalidOperationException(
+                    "Azure Storage connection string is not configured. Set 'AzureStorage:ConnectionString' in configuration.");
             }
 
             try
@@ -52,24 +47,16 @@ namespace DXApplication1.Services
                 var blobServiceClient = new BlobServiceClient(connectionString);
                 _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
                 _containerClient.CreateIfNotExists(PublicAccessType.None);
-                _isEnabled = true;
                 _logger.LogInformation("Azure Blob Storage service initialized successfully. Container: {ContainerName}", containerName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize Azure Blob Storage service");
-                _isEnabled = false;
+                throw new InvalidOperationException("Failed to initialize Azure Blob Storage service.", ex);
             }
         }
 
         public async Task<bool> UploadReportAsync(string reportName, Stream reportStream)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot upload report: {ReportName}", reportName);
-                return false;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -90,12 +77,6 @@ namespace DXApplication1.Services
 
         public async Task<Stream?> DownloadReportAsync(string reportName)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot download report: {ReportName}", reportName);
-                return null;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -124,11 +105,6 @@ namespace DXApplication1.Services
         {
             var reports = new List<string>();
 
-            if (!_isEnabled || _containerClient == null)
-            {
-                return reports;
-            }
-
             try
             {
                 await foreach (var blobItem in _containerClient.GetBlobsAsync())
@@ -147,11 +123,6 @@ namespace DXApplication1.Services
 
         public async Task<bool> DeleteReportAsync(string reportName)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                return false;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -170,11 +141,6 @@ namespace DXApplication1.Services
 
         public async Task<bool> ReportExistsAsync(string reportName)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                return false;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -199,12 +165,6 @@ namespace DXApplication1.Services
 
         public bool UploadReportSync(string reportName, Stream reportStream)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot upload report: {ReportName}", reportName);
-                return false;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -225,12 +185,6 @@ namespace DXApplication1.Services
 
         public Stream? DownloadReportSync(string reportName)
         {
-            if (!_isEnabled || _containerClient == null)
-            {
-                _logger.LogWarning("Azure storage is not enabled. Cannot download report: {ReportName}", reportName);
-                return null;
-            }
-
             try
             {
                 var blobName = GetBlobName(reportName);
@@ -258,11 +212,6 @@ namespace DXApplication1.Services
         public List<string> ListReportsSync()
         {
             var reports = new List<string>();
-
-            if (!_isEnabled || _containerClient == null)
-            {
-                return reports;
-            }
 
             try
             {

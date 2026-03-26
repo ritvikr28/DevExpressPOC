@@ -19,7 +19,6 @@ namespace DXApplication1.Controllers
     {
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         private readonly ILogger<ReportController> _logger;
-        private readonly string _reportsDirectory = Path.Combine("Data", "Reports");
 
         public ReportController(
             IAzureBlobStorageService azureBlobStorageService,
@@ -30,79 +29,20 @@ namespace DXApplication1.Controllers
         }
 
         /// <summary>
-        /// List all available reports from both local storage and Azure
+        /// List all available reports from Azure Storage
         /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ReportInfo>>> ListReports()
         {
-            var reports = new List<ReportInfo>();
-
-            // Get local reports
-            if (Directory.Exists(_reportsDirectory))
+            var azureReports = await _azureBlobStorageService.ListReportsAsync();
+            var reports = azureReports.Select(name => new ReportInfo
             {
-                var localReports = Directory.GetFiles(_reportsDirectory, "*.repx")
-                    .Select(f => new ReportInfo
-                    {
-                        Name = Path.GetFileNameWithoutExtension(f),
-                        StorageLocation = "Local",
-                        LastModified = System.IO.File.GetLastWriteTimeUtc(f)
-                    });
-                reports.AddRange(localReports);
-            }
-
-            // Get Azure reports
-            if (_azureBlobStorageService.IsEnabled)
-            {
-                var azureReports = await _azureBlobStorageService.ListReportsAsync();
-                foreach (var reportName in azureReports)
-                {
-                    // Check if not already in local list
-                    if (!reports.Any(r => r.Name == reportName))
-                    {
-                        reports.Add(new ReportInfo
-                        {
-                            Name = reportName,
-                            StorageLocation = "Azure",
-                            LastModified = null
-                        });
-                    }
-                    else
-                    {
-                        // Mark as both local and Azure
-                        var existing = reports.First(r => r.Name == reportName);
-                        existing.StorageLocation = "Both";
-                    }
-                }
-            }
+                Name = name,
+                StorageLocation = "Azure",
+                LastModified = null
+            });
 
             return Ok(reports);
-        }
-
-        /// <summary>
-        /// Save a report to Azure Storage
-        /// </summary>
-        [HttpPost("{reportName}/save-to-azure")]
-        public async Task<ActionResult> SaveToAzure(string reportName)
-        {
-            if (!_azureBlobStorageService.IsEnabled)
-            {
-                return BadRequest(new { error = "Azure Storage is not configured" });
-            }
-
-            var filePath = GetReportFilePath(reportName);
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound(new { error = $"Report '{reportName}' not found locally" });
-            }
-
-            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var success = await _azureBlobStorageService.UploadReportAsync(reportName, stream);
-
-            if (success)
-            {
-                return Ok(new { message = $"Report '{reportName}' saved to Azure Storage" });
-            }
-            return StatusCode(500, new { error = "Failed to save report to Azure Storage" });
         }
 
         /// <summary>
@@ -129,9 +69,9 @@ namespace DXApplication1.Controllers
 
                 try
                 {
-                    // Load the template report
-                    var templatePath = GetReportFilePath(reportRequest.TemplateName);
-                    if (!System.IO.File.Exists(templatePath))
+                    // Load the template report from Azure
+                    using var templateStream = await _azureBlobStorageService.DownloadReportAsync(reportRequest.TemplateName);
+                    if (templateStream == null)
                     {
                         result.Success = false;
                         result.Error = $"Template '{reportRequest.TemplateName}' not found";
@@ -140,7 +80,6 @@ namespace DXApplication1.Controllers
                     }
 
                     using var report = new XtraReport();
-                    using var templateStream = new FileStream(templatePath, FileMode.Open, FileAccess.Read);
                     report.LoadLayoutFromXml(templateStream);
 
                     // Apply parameters if provided
@@ -157,25 +96,19 @@ namespace DXApplication1.Controllers
                         }
                     }
 
-                    // Save the generated report
-                    var outputPath = GetReportFilePath(reportRequest.OutputName);
-                    using var outputStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-                    report.SaveLayoutToXml(outputStream);
+                    // Save the generated report to Azure
+                    using var azureStream = new MemoryStream();
+                    report.SaveLayoutToXml(azureStream);
+                    azureStream.Position = 0;
+                    var azureSuccess = await _azureBlobStorageService.UploadReportAsync(reportRequest.OutputName, azureStream);
 
-                    result.Success = true;
-                    result.LocalPath = outputPath;
-
-                    // Also save to Azure if requested
-                    if (request.SaveToAzure && _azureBlobStorageService.IsEnabled)
+                    result.Success = azureSuccess;
+                    if (!azureSuccess)
                     {
-                        using var azureStream = new MemoryStream();
-                        report.SaveLayoutToXml(azureStream);
-                        azureStream.Position = 0;
-                        var azureSuccess = await _azureBlobStorageService.UploadReportAsync(reportRequest.OutputName, azureStream);
-                        result.SavedToAzure = azureSuccess;
+                        result.Error = "Failed to save report to Azure Storage";
                     }
 
-                    _logger.LogInformation("Generated report: {OutputName} from template: {TemplateName}", 
+                    _logger.LogInformation("Generated report: {OutputName} from template: {TemplateName}",
                         reportRequest.OutputName, reportRequest.TemplateName);
                 }
                 catch (Exception ex)
@@ -202,12 +135,11 @@ namespace DXApplication1.Controllers
         /// </summary>
         [HttpPost("{reportName}/export")]
         public async Task<ActionResult> ExportReport(
-            string reportName, 
-            [FromQuery] string format = "pdf",
-            [FromQuery] bool saveToAzure = false)
+            string reportName,
+            [FromQuery] string format = "pdf")
         {
-            var filePath = GetReportFilePath(reportName);
-            if (!System.IO.File.Exists(filePath))
+            using var reportStream = await _azureBlobStorageService.DownloadReportAsync(reportName);
+            if (reportStream == null)
             {
                 return NotFound(new { error = $"Report '{reportName}' not found" });
             }
@@ -215,9 +147,7 @@ namespace DXApplication1.Controllers
             try
             {
                 using var report = new XtraReport();
-                using var templateStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                report.LoadLayoutFromXml(templateStream);
-
+                report.LoadLayoutFromXml(reportStream);
                 using var outputStream = new MemoryStream();
                 string contentType;
                 string extension;
@@ -250,16 +180,6 @@ namespace DXApplication1.Controllers
                         return BadRequest(new { error = $"Unsupported format: {format}. Supported formats: pdf, xlsx, docx, html" });
                 }
 
-                outputStream.Position = 0;
-
-                // Save to Azure if requested
-                if (saveToAzure && _azureBlobStorageService.IsEnabled)
-                {
-                    var exportedFileName = $"{reportName}_exported.{extension}";
-                    await _azureBlobStorageService.UploadReportAsync(exportedFileName, outputStream);
-                    outputStream.Position = 0;
-                }
-
                 return File(outputStream.ToArray(), contentType, $"{reportName}.{extension}");
             }
             catch (Exception ex)
@@ -275,35 +195,12 @@ namespace DXApplication1.Controllers
         [HttpDelete("{reportName}/azure")]
         public async Task<ActionResult> DeleteFromAzure(string reportName)
         {
-            if (!_azureBlobStorageService.IsEnabled)
-            {
-                return BadRequest(new { error = "Azure Storage is not configured" });
-            }
-
             var success = await _azureBlobStorageService.DeleteReportAsync(reportName);
             if (success)
             {
                 return Ok(new { message = $"Report '{reportName}' deleted from Azure Storage" });
             }
             return StatusCode(500, new { error = "Failed to delete report from Azure Storage" });
-        }
-
-        /// <summary>
-        /// Check Azure Storage status
-        /// </summary>
-        [HttpGet("azure-status")]
-        public ActionResult<AzureStorageStatus> GetAzureStatus()
-        {
-            return Ok(new AzureStorageStatus
-            {
-                IsEnabled = _azureBlobStorageService.IsEnabled
-            });
-        }
-
-        private string GetReportFilePath(string reportName)
-        {
-            var safeReportName = Path.GetFileNameWithoutExtension(reportName);
-            return Path.Combine(_reportsDirectory, $"{safeReportName}.repx");
         }
 
         private static object? ConvertParameterValue(object value, Type targetType)
@@ -351,7 +248,6 @@ namespace DXApplication1.Controllers
     public class MultipleReportGenerationRequest
     {
         public List<ReportGenerationRequestItem> Reports { get; set; } = new();
-        public bool SaveToAzure { get; set; }
     }
 
     public class ReportGenerationRequestItem
@@ -375,13 +271,6 @@ namespace DXApplication1.Controllers
         public string TemplateName { get; set; } = string.Empty;
         public bool Success { get; set; }
         public string? Error { get; set; }
-        public string? LocalPath { get; set; }
-        public bool SavedToAzure { get; set; }
-    }
-
-    public class AzureStorageStatus
-    {
-        public bool IsEnabled { get; set; }
     }
 
     #endregion
