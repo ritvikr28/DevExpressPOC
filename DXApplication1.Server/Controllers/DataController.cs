@@ -19,11 +19,11 @@ namespace DXApplication1.Server.Controllers
         private static readonly string ColumnsMetadataPath = "Data/columns-metadata.json";
 
         /// <summary>
-        /// Maps data source name to the corresponding JSON data file path.
+        /// Maps data source name to the corresponding JSON data file path (case-insensitive).
         /// </summary>
         private static string? GetDataFilePath(string dataSourceName)
         {
-            return dataSourceName.ToLower() switch
+            return dataSourceName.ToLowerInvariant() switch
             {
                 "pupil" => "Data/pupil-data.json",
                 "staff" => "Data/staff-data.json",
@@ -45,6 +45,33 @@ namespace DXApplication1.Server.Controllers
                 JsonValueKind.False => false,
                 _ => element.ToString()
             };
+        }
+
+        /// <summary>
+        /// Parses column metadata from a JSON array element.
+        /// </summary>
+        private static List<ColumnMetadata> ParseColumnMetadata(JsonElement columnsArray)
+        {
+            var columns = new List<ColumnMetadata>();
+            foreach (var col in columnsArray.EnumerateArray())
+            {
+                columns.Add(new ColumnMetadata
+                {
+                    Name = col.GetProperty("name").GetString() ?? string.Empty,
+                    Type = col.GetProperty("type").GetString() ?? string.Empty
+                });
+            }
+            return columns;
+        }
+
+        /// <summary>
+        /// Checks if the columns metadata file exists and returns an appropriate error result if not.
+        /// </summary>
+        private IActionResult? ValidateMetadataFileExists()
+        {
+            if (!System.IO.File.Exists(ColumnsMetadataPath))
+                return NotFound("Columns metadata file not found.");
+            return null;
         }
 
         /// <summary>
@@ -116,8 +143,9 @@ namespace DXApplication1.Server.Controllers
         [SecurityDomain(["NG.Homepage.Access"], Operation.View)]
         public async Task<IActionResult> GetDataSources()
         {
-            if (!System.IO.File.Exists(ColumnsMetadataPath))
-                return NotFound("Columns metadata file not found.");
+            var validationError = ValidateMetadataFileExists();
+            if (validationError != null)
+                return validationError;
 
             using var stream = System.IO.File.OpenRead(ColumnsMetadataPath);
             var metadataDoc = await JsonDocument.ParseAsync(stream);
@@ -129,17 +157,8 @@ namespace DXApplication1.Server.Controllers
                 var schema = new DataSourceSchema
                 {
                     Name = prop.Name,
-                    Columns = new List<ColumnMetadata>()
+                    Columns = ParseColumnMetadata(prop.Value)
                 };
-
-                foreach (var col in prop.Value.EnumerateArray())
-                {
-                    schema.Columns.Add(new ColumnMetadata
-                    {
-                        Name = col.GetProperty("name").GetString() ?? string.Empty,
-                        Type = col.GetProperty("type").GetString() ?? string.Empty
-                    });
-                }
 
                 dataSources.Add(schema);
             }
@@ -158,13 +177,14 @@ namespace DXApplication1.Server.Controllers
             if (string.IsNullOrWhiteSpace(dataSourceName))
                 return BadRequest("dataSourceName is required.");
 
-            if (!System.IO.File.Exists(ColumnsMetadataPath))
-                return NotFound("Columns metadata file not found.");
+            var validationError = ValidateMetadataFileExists();
+            if (validationError != null)
+                return validationError;
 
             using var stream = System.IO.File.OpenRead(ColumnsMetadataPath);
             var metadataDoc = await JsonDocument.ParseAsync(stream);
 
-            // Find the matching data source (case-insensitive)
+            // Find the matching data source (case-insensitive, consistent with GetDataFilePath)
             foreach (var prop in metadataDoc.RootElement.EnumerateObject())
             {
                 if (string.Equals(prop.Name, dataSourceName, StringComparison.OrdinalIgnoreCase))
@@ -172,17 +192,8 @@ namespace DXApplication1.Server.Controllers
                     var schema = new DataSourceSchema
                     {
                         Name = prop.Name,
-                        Columns = new List<ColumnMetadata>()
+                        Columns = ParseColumnMetadata(prop.Value)
                     };
-
-                    foreach (var col in prop.Value.EnumerateArray())
-                    {
-                        schema.Columns.Add(new ColumnMetadata
-                        {
-                            Name = col.GetProperty("name").GetString() ?? string.Empty,
-                            Type = col.GetProperty("type").GetString() ?? string.Empty
-                        });
-                    }
 
                     return Ok(schema);
                 }

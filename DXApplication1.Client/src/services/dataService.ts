@@ -168,7 +168,8 @@ export class DataSelectionManager {
     private selections: Map<string, Set<string>> = new Map();
 
     /**
-     * Add a data source with its available columns
+     * Initialize a data source for column selection tracking.
+     * Creates an empty selection set for the given data source.
      */
     addDataSource(dataSourceName: string): void {
         if (!this.selections.has(dataSourceName)) {
