@@ -367,3 +367,4 @@ MigrationBackup/
 FodyWeavers.xsd
 # Client build artifacts (obj/ is already covered by [Oo]bj/ but ensure nested paths are excluded)
 DXApplication1.Client/obj/
+DXApplication1.Client/obj\Release
