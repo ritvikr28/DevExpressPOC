@@ -25,7 +25,8 @@ namespace DXApplication1.Services
         {
             var storage = new CustomApiDataConnectionStorage(_configuration, _httpContextAccessor);
             var token = storage.GetBearerToken();
-            return new WebDocumentViewerJsonDataConnectionProvider(storage.GetConnections(), token);
+            // Pass isSchemaCall: false so the viewer fetches actual data, not just schema
+            return new WebDocumentViewerJsonDataConnectionProvider(storage.GetConnections(), token, isSchemaCall: false);
         }
     }
 
@@ -33,11 +34,16 @@ namespace DXApplication1.Services
     {
         readonly IEnumerable<JsonDataConnectionDescription> jsonDataConnections;
         readonly string? bearerToken;
+        readonly bool isSchemaCall;
 
-        public WebDocumentViewerJsonDataConnectionProvider(IEnumerable<JsonDataConnectionDescription> jsonDataConnections, string? bearerToken = null)
+        public WebDocumentViewerJsonDataConnectionProvider(
+            IEnumerable<JsonDataConnectionDescription> jsonDataConnections, 
+            string? bearerToken = null,
+            bool isSchemaCall = true)
         {
             this.jsonDataConnections = jsonDataConnections;
             this.bearerToken = bearerToken;
+            this.isSchemaCall = isSchemaCall;
         }
 
         public JsonDataConnection GetJsonDataConnection(string name)
@@ -45,7 +51,7 @@ namespace DXApplication1.Services
             var connection = jsonDataConnections.FirstOrDefault(x => x.Name == name);
             if (connection == null)
                 throw new InvalidOperationException($"Connection '{name}' not found.");
-            return CustomApiDataConnectionStorage.CreateJsonDataConnection(connection, bearerToken);
+            return CustomApiDataConnectionStorage.CreateJsonDataConnection(connection, bearerToken, isSchemaCall);
         }
     }
 }

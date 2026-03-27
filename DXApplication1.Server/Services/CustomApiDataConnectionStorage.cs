@@ -81,15 +81,24 @@ namespace DXApplication1.Services
         /// When <paramref name="bearerToken"/> is provided and the connection string specifies a URI,
         /// a <see cref="UriJsonSource"/> with an Authorization header is used so that the server-side
         /// DevExpress report engine forwards the caller's token when fetching JSON data.
+        /// 
+        /// When <paramref name="isSchemaCall"/> is false, the IsSchemaCall query parameter is removed from the URI
+        /// to fetch actual data instead of just schema information.
         /// </summary>
-        public static JsonDataConnection CreateJsonDataConnection(JsonDataConnectionDescription dataConnection, string? bearerToken = null)
+        public static JsonDataConnection CreateJsonDataConnection(
+            JsonDataConnectionDescription dataConnection, 
+            string? bearerToken = null,
+            bool isSchemaCall = true)
         {
             if (!string.IsNullOrEmpty(bearerToken))
             {
                 var (uri, _) = ParseConnectionString(dataConnection.ConnectionString);
                 if (uri is not null)
                 {
-                    var uriSource = new UriJsonSource(uri);
+                    // Modify the URI based on isSchemaCall flag
+                    var modifiedUri = ModifyUriForSchemaCall(uri, isSchemaCall);
+                    
+                    var uriSource = new UriJsonSource(modifiedUri);
                     uriSource.HeaderParameters.Add(new HeaderParameter("Authorization", $"Bearer {bearerToken}"));
                     return new JsonDataConnection(uriSource)
                     {
@@ -101,11 +110,103 @@ namespace DXApplication1.Services
 
             // Fall back to plain connection string when no token is available or the
             // connection string is not a URI-based one.
-            return new JsonDataConnection(dataConnection.ConnectionString)
+            // For non-token connections, also modify the connection string if needed
+            var modifiedConnectionString = ModifyConnectionStringForSchemaCall(dataConnection.ConnectionString, isSchemaCall);
+            return new JsonDataConnection(modifiedConnectionString)
             {
                 StoreConnectionNameOnly = true,
                 Name = dataConnection.Name
             };
+        }
+
+        /// <summary>
+        /// Modifies the URI to add or remove the IsSchemaCall query parameter.
+        /// </summary>
+        private static Uri ModifyUriForSchemaCall(Uri uri, bool isSchemaCall)
+        {
+            var uriBuilder = new UriBuilder(uri);
+            var queryParams = ParseQueryString(uriBuilder.Query);
+
+            if (isSchemaCall)
+            {
+                // Ensure IsSchemaCall=true is in the query
+                queryParams["IsSchemaCall"] = "true";
+            }
+            else
+            {
+                // Remove IsSchemaCall parameter to fetch actual data
+                queryParams.Remove("IsSchemaCall");
+            }
+
+            uriBuilder.Query = BuildQueryString(queryParams);
+            return uriBuilder.Uri;
+        }
+
+        /// <summary>
+        /// Parses a query string into a dictionary of key-value pairs.
+        /// </summary>
+        private static Dictionary<string, string> ParseQueryString(string query)
+        {
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            if (string.IsNullOrEmpty(query))
+                return result;
+
+            // Remove leading '?' if present
+            var queryString = query.TrimStart('?');
+            
+            foreach (var pair in queryString.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var eqIndex = pair.IndexOf('=');
+                if (eqIndex > 0)
+                {
+                    var key = Uri.UnescapeDataString(pair.Substring(0, eqIndex));
+                    var value = eqIndex < pair.Length - 1 
+                        ? Uri.UnescapeDataString(pair.Substring(eqIndex + 1)) 
+                        : string.Empty;
+                    result[key] = value;
+                }
+                else if (pair.Length > 0)
+                {
+                    result[Uri.UnescapeDataString(pair)] = string.Empty;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Builds a query string from a dictionary of key-value pairs.
+        /// </summary>
+        private static string BuildQueryString(Dictionary<string, string> queryParams)
+        {
+            if (queryParams.Count == 0)
+                return string.Empty;
+
+            var pairs = queryParams.Select(kvp => 
+                $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}");
+            return string.Join("&", pairs);
+        }
+
+        /// <summary>
+        /// Modifies the connection string to add or remove the IsSchemaCall query parameter.
+        /// </summary>
+        private static string ModifyConnectionStringForSchemaCall(string connectionString, bool isSchemaCall)
+        {
+            var (uri, rootElement) = ParseConnectionString(connectionString);
+            if (uri == null)
+                return connectionString;
+
+            var modifiedUri = ModifyUriForSchemaCall(uri, isSchemaCall);
+            
+            // Reconstruct the connection string
+            var result = $"Uri={modifiedUri}";
+            if (!string.IsNullOrEmpty(rootElement))
+                result += $";RootElement={rootElement}";
+            else
+                result += ";RootElement=";
+            
+            return result;
         }
 
         /// <summary>

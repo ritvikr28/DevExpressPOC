@@ -101,9 +101,21 @@ export const getDataSourceSchema = async (dataSourceName: string): Promise<DataS
 
 /**
  * Gets data from a single data source with optional column selection
+ * 
+ * @param dataSourceName - The name of the data source (Pupil, Staff, Assessment)
+ * @param columns - Optional array of column names to retrieve (if empty, all columns are returned)
+ * @param isSchemaCall - When true, returns schema structure only (no actual data). Used by ReportDesigner to load column metadata without fetching actual data.
  */
-export const getData = async (dataSourceName: string, columns?: string[]): Promise<Record<string, unknown>[]> => {
+export const getData = async (
+    dataSourceName: string, 
+    columns?: string[],
+    isSchemaCall: boolean = false
+): Promise<Record<string, unknown>[]> => {
     let url = `${API_BASE}/data?dataSourceName=${encodeURIComponent(dataSourceName)}`;
+    
+    if (isSchemaCall) {
+        url += `&isSchemaCall=true`;
+    }
     
     if (columns && columns.length > 0) {
         const columnParams = columns.map(c => `columns=${encodeURIComponent(c)}`).join('&');

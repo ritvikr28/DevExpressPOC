@@ -1,14 +1,14 @@
 [
   {
     "Name": "Pupil",
-    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Pupil;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Pupil&IsSchemaCall=true;RootElement="
   },
   {
     "Name": "Staff",
-    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Staff;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Staff&IsSchemaCall=true;RootElement="
   },
   {
     "Name": "Assessment",
-    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Assessment;RootElement="
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Assessment&IsSchemaCall=true;RootElement="
   }
 ]
