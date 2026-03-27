@@ -11,61 +11,26 @@ using System.Linq;
 namespace DXApplication1.Services
 {
     /// <summary>
-    /// Provides Federated Data Source support for DevExpress reports.
-    /// This enables JOIN operations between multiple JSON data sources.
+    /// NOTE: DevExpress Data Federation works automatically with JSON data sources.
+    /// When you create a FederationDataSource in a report and reference JsonDataSource objects
+    /// with ConnectionName properties, DevExpress resolves those connections through:
+    /// - CustomApiDataConnectionStorage (for Report Designer)
+    /// - CustomJsonDataConnectionProviderFactory (for Report Viewer)
     /// 
-    /// IMPORTANT: For Data Federation to work with JOINs:
-    /// 1. This factory must be registered with RegisterFederationDataSourceProviderFactory
-    /// 2. The JSON data sources must be properly resolved through CustomApiDataConnectionStorage
-    /// 3. Data must be pre-loaded before federation queries can run
+    /// No additional factory registration is needed for Data Federation to work.
+    /// The FederationDataSource queries the underlying JsonDataSource objects which
+    /// then call the API endpoints defined in api-connections.json.
+    /// 
+    /// This file is kept for documentation purposes but the classes below are not used
+    /// because DevExpress doesn't expose IFederationDataSourceProviderFactory interface.
     /// </summary>
-    public class CustomFederationDataSourceProviderFactory : IFederationDataSourceProviderFactory
+    public static class FederationDataSourceDocumentation
     {
-        private readonly IConfiguration _configuration;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-
-        public CustomFederationDataSourceProviderFactory(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
-        {
-            _configuration = configuration;
-            _httpContextAccessor = httpContextAccessor;
-        }
-
-        public IFederationDataSourceProviderService Create()
-        {
-            var connectionStorage = new CustomApiDataConnectionStorage(_configuration, _httpContextAccessor);
-            return new CustomFederationDataSourceProvider(connectionStorage);
-        }
-    }
-
-    /// <summary>
-    /// Implements IFederationDataSourceProviderService to enable Data Federation with JOIN support.
-    /// This service resolves JSON data connections for use in federated queries.
-    /// When DevExpress encounters a FederationDataSource with queries referencing JSON connections,
-    /// it calls this service to resolve those connections.
-    /// </summary>
-    public class CustomFederationDataSourceProvider : IFederationDataSourceProviderService
-    {
-        private readonly CustomApiDataConnectionStorage _connectionStorage;
-
-        public CustomFederationDataSourceProvider(CustomApiDataConnectionStorage connectionStorage)
-        {
-            _connectionStorage = connectionStorage;
-        }
-
-        /// <summary>
-        /// Gets a JSON data connection by name for use in federation queries.
-        /// The connection is resolved from the registered connection storage and
-        /// includes authorization headers when available.
-        /// </summary>
-        public JsonDataConnection GetJsonDataConnection(string name)
-        {
-            var connections = _connectionStorage.GetConnections();
-            var connection = connections.FirstOrDefault(c => c.Name == name);
-            if (connection == null)
-                throw new InvalidOperationException($"JSON data connection '{name}' not found in registered connections.");
-            
-            var token = _connectionStorage.GetBearerToken();
-            return CustomApiDataConnectionStorage.CreateJsonDataConnection(connection, token);
-        }
+        // Data Federation works as follows:
+        // 1. Create JsonDataSource objects with ConnectionName matching api-connections.json entries
+        // 2. Add those JsonDataSource objects to the report's ComponentStorage
+        // 3. Create a FederationDataSource that references those JsonDataSource objects via Source/SourceNode
+        // 4. Define queries using SelectNode and JoinElement
+        // 5. DevExpress automatically resolves the JsonDataSource connections at runtime
     }
 }

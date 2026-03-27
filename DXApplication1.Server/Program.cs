@@ -42,16 +42,13 @@ builder.Services.ConfigureReportingServices(configurator =>
     {
         // Register your API-based connection provider for the designer
         designerConfigurator.RegisterDataSourceWizardJsonConnectionStorage<CustomApiDataConnectionStorage>(true);
-        // Register federation data source provider to enable Data Federation with JOINs
-        designerConfigurator.RegisterFederationDataSourceProviderFactory<CustomFederationDataSourceProviderFactory>();
     });
     configurator.ConfigureWebDocumentViewer(viewerConfigurator =>
     {
         viewerConfigurator.UseCachedReportSourceBuilder();
         // Register your API-based connection provider for the viewer
+        // This also enables Data Federation - FederationDataSource uses the same JSON connections
         viewerConfigurator.RegisterJsonDataConnectionProviderFactory<CustomJsonDataConnectionProviderFactory>();
-        // Register federation data source provider to enable Data Federation with JOINs
-        viewerConfigurator.RegisterFederationDataSourceProviderFactory<CustomFederationDataSourceProviderFactory>();
     });
 });
 
