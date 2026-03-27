@@ -184,8 +184,7 @@ namespace DXApplication1.Server.Controllers
                         sampleRow[col.Name] = GetDefaultValueForType(col.Type);
                     }
 
-                    // Return empty array - DevExpress will understand the schema from the columns metadata
-                    // But we return one sample row so DevExpress can infer the data types
+                    // Return a single sample row with default values so DevExpress can infer the data types
                     return (new List<Dictionary<string, object?>> { sampleRow }, null);
                 }
             }

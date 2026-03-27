@@ -190,6 +190,7 @@ namespace DXApplication1.Services
 
         /// <summary>
         /// Modifies the connection string to add or remove the IsSchemaCall query parameter.
+        /// Note: Empty RootElement= is preserved as it's a DevExpress convention for JSON array roots.
         /// </summary>
         private static string ModifyConnectionStringForSchemaCall(string connectionString, bool isSchemaCall)
         {
@@ -199,7 +200,9 @@ namespace DXApplication1.Services
 
             var modifiedUri = ModifyUriForSchemaCall(uri, isSchemaCall);
             
-            // Reconstruct the connection string
+            // Reconstruct the connection string.
+            // Note: RootElement= (empty) is intentionally preserved as it's a DevExpress convention
+            // indicating the JSON root is an array. Omitting it could cause parsing issues.
             var result = $"Uri={modifiedUri}";
             if (!string.IsNullOrEmpty(rootElement))
                 result += $";RootElement={rootElement}";
