@@ -2,6 +2,7 @@ import { createBrowserRouter, createRoutesFromElements, Route } from "react-rout
 import Home  from './components/Home';
 import ReportViewer from './components/ReportViewer';
 import ReportDesigner from './components/ReportDesigner';
+import DataSourceSelector from './components/DataSourceSelector';
 import ProtectedRoute from './components/ProtectedRoute';
 import { App } from './App';
 
@@ -24,6 +25,11 @@ export const router = createBrowserRouter(createRoutesFromElements(
         <Route path="ReportDesigner" element={
             <ProtectedRoute>
                 <ReportDesigner hostUrl={getBaseUrl()} />
+            </ProtectedRoute>
+        } />
+        <Route path="DataSourceSelector" element={
+            <ProtectedRoute>
+                <DataSourceSelector />
             </ProtectedRoute>
         } />
     </Route>

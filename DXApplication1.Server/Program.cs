@@ -47,6 +47,7 @@ builder.Services.ConfigureReportingServices(configurator =>
     {
         viewerConfigurator.UseCachedReportSourceBuilder();
         // Register your API-based connection provider for the viewer
+        // This also enables Data Federation - FederationDataSource uses the same JSON connections
         viewerConfigurator.RegisterJsonDataConnectionProviderFactory<CustomJsonDataConnectionProviderFactory>();
     });
 });

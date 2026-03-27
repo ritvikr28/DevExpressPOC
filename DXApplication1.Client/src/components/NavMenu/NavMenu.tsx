@@ -44,6 +44,9 @@ export default function NavMenu() {
                                     <Link className="nav-link text-dark" to="/">Home</Link>
                                 </li>
                                 <li className="nav-item">
+                                    <Link className="nav-link text-dark" to="/DataSourceSelector">Data Sources</Link>
+                                </li>
+                                <li className="nav-item">
                                     <Link className="nav-link text-dark" to="/ReportDesigner">Report Designer</Link>
                                 </li>
                                 <li className="nav-item">
