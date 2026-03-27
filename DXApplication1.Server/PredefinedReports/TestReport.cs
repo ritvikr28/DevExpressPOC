@@ -1,3 +1,4 @@
+using DevExpress.DataAccess.DataFederation;
 using DevExpress.DataAccess.Json;
 using DevExpress.XtraReports.UI;
 using DevExpress.XtraReports.Parameters;
@@ -6,38 +7,42 @@ using System.Drawing;
 namespace DXApplication1.PredefinedReports
 {
     /// <summary>
-    /// A report that demonstrates dynamic column selection from the UI.
-    /// This report uses all 3 data sources (Pupil, Staff, Assessment) and allows
-    /// users to specify which columns to fetch via report parameters.
+    /// A report that demonstrates Data Federation with all 3 data sources (Pupil, Staff, Assessment)
+    /// linked together via JOINs, with dynamic column selection from the UI via report parameters.
     /// 
-    /// Parameters:
-    /// - PupilColumns: Comma-separated list of columns (e.g., "PupilId,FirstName,LastName")
-    /// - StaffColumns: Comma-separated list of columns (e.g., "StaffId,FirstName,Role")
-    /// - AssessmentColumns: Comma-separated list of columns (e.g., "AssessmentId,Subject,Score")
+    /// Data Federation joins:
+    /// - Pupil (primary) LEFT JOIN Assessment ON PupilId
+    /// - Pupil LEFT JOIN Staff (for demonstration - linked conceptually)
     /// 
-    /// When previewed in the Report Designer or Viewer, users can fill in these parameters
-    /// to fetch only the desired columns from each data source.
+    /// Parameters allow users to specify which columns to fetch from each source:
+    /// - PupilColumns: Columns from Pupil data (e.g., "PupilId,FirstName,LastName")
+    /// - StaffColumns: Columns from Staff data (e.g., "StaffId,FirstName,Role")
+    /// - AssessmentColumns: Columns from Assessment data (e.g., "AssessmentId,Subject,Score")
+    /// 
+    /// IMPORTANT: For Data Federation to work:
+    /// 1. CustomFederationDataSourceProviderFactory must be registered in Program.cs
+    /// 2. JSON connections must be available through CustomApiDataConnectionStorage
+    /// 3. The FederationDataSource references sources by their ConnectionName
     /// </summary>
     public partial class TestReport : XtraReport
     {
         public TestReport()
         {
             InitializeComponent();
-            SetupDynamicDataSources();
+            SetupFederatedDataSourceWithParameters();
         }
 
         /// <summary>
-        /// Sets up report parameters for dynamic column selection and configures
-        /// all 3 data sources (Pupil, Staff, Assessment) with StoreConnectionNameOnly pattern.
+        /// Sets up report parameters for dynamic column selection and creates a 
+        /// FederationDataSource that JOINs all 3 data sources (Pupil, Staff, Assessment).
         /// </summary>
-        private void SetupDynamicDataSources()
+        private void SetupFederatedDataSourceWithParameters()
         {
             // ======================================================================
             // REPORT PARAMETERS for dynamic column selection
             // These parameters allow the UI to specify which columns to fetch
             // ======================================================================
             
-            // Pupil columns parameter - default to all columns
             var pupilColumnsParam = new Parameter
             {
                 Name = "PupilColumns",
@@ -47,7 +52,6 @@ namespace DXApplication1.PredefinedReports
                 Visible = true
             };
             
-            // Staff columns parameter
             var staffColumnsParam = new Parameter
             {
                 Name = "StaffColumns", 
@@ -57,7 +61,6 @@ namespace DXApplication1.PredefinedReports
                 Visible = true
             };
             
-            // Assessment columns parameter
             var assessmentColumnsParam = new Parameter
             {
                 Name = "AssessmentColumns",
@@ -70,67 +73,131 @@ namespace DXApplication1.PredefinedReports
             this.Parameters.AddRange(new Parameter[] { pupilColumnsParam, staffColumnsParam, assessmentColumnsParam });
 
             // ======================================================================
-            // DATA SOURCES - Using Dynamic connections with parameter-based columns
-            // These connections use {?ParameterName} syntax for dynamic column filtering
+            // JSON DATA SOURCES - Using Dynamic connections with parameter-based columns
+            // These use {?ParameterName} syntax in api-connections.json for column filtering
             // ======================================================================
 
-            // Create Pupil data source - uses PupilDynamic connection with PupilColumns parameter
-            var pupilDataSource = new JsonDataSource
+            var pupilJsonSource = new JsonDataSource
             {
-                Name = "PupilDataSource",
-                ConnectionName = "PupilDynamic"
+                Name = "PupilJsonSource",
+                ConnectionName = "PupilDynamic"  // Uses {?PupilColumns} parameter
             };
 
-            // Create Staff data source - uses StaffDynamic connection with StaffColumns parameter
-            var staffDataSource = new JsonDataSource
+            var staffJsonSource = new JsonDataSource
             {
-                Name = "StaffDataSource",
-                ConnectionName = "StaffDynamic"
+                Name = "StaffJsonSource",
+                ConnectionName = "StaffDynamic"  // Uses {?StaffColumns} parameter
             };
 
-            // Create Assessment data source - uses AssessmentDynamic connection with AssessmentColumns parameter
-            var assessmentDataSource = new JsonDataSource
+            var assessmentJsonSource = new JsonDataSource
             {
-                Name = "AssessmentDataSource",
-                ConnectionName = "AssessmentDynamic"
+                Name = "AssessmentJsonSource",
+                ConnectionName = "AssessmentDynamic"  // Uses {?AssessmentColumns} parameter
             };
 
-            // Add all data sources to the report's component container
-            this.ComponentStorage.Add(pupilDataSource);
-            this.ComponentStorage.Add(staffDataSource);
-            this.ComponentStorage.Add(assessmentDataSource);
+            // Add JSON sources to component storage so they can be resolved
+            this.ComponentStorage.Add(pupilJsonSource);
+            this.ComponentStorage.Add(staffJsonSource);
+            this.ComponentStorage.Add(assessmentJsonSource);
 
-            // Set Pupil as the primary data source (for the main Detail band)
-            this.DataSource = pupilDataSource;
-            this.DataMember = string.Empty;
+            // ======================================================================
+            // FEDERATION DATA SOURCE - Links all 3 data sources via JOINs
+            // ======================================================================
 
-            // Create report layout with all three data sources
-            SetupReportLayout(staffDataSource, assessmentDataSource);
+            var federationDataSource = new FederationDataSource();
+            federationDataSource.Name = "AllSourcesFederation";
+
+            // Create Source wrappers for Data Federation
+            var pupilSource = new Source("Pupils", pupilJsonSource, "");
+            var staffSource = new Source("Staff", staffJsonSource, "");
+            var assessmentSource = new Source("Assessments", assessmentJsonSource, "");
+
+            // Create SourceNode wrappers (required for SelectNode and JoinElement)
+            var pupilSourceNode = new SourceNode(pupilSource, "Pupils");
+            var staffSourceNode = new SourceNode(staffSource, "Staff");
+            var assessmentSourceNode = new SourceNode(assessmentSource, "Assessments");
+
+            // Create the federated query with Pupil as the primary source
+            var federatedQuery = new SelectNode(pupilSourceNode)
+            {
+                Alias = "PupilStaffAssessments"
+            };
+
+            // JOIN Assessment on PupilId (Pupil.PupilId = Assessment.PupilId)
+            federatedQuery.SubNodes.Add(new JoinElement(assessmentSourceNode, JoinType.LeftOuter,
+                "[Pupils.PupilId] = [Assessments.PupilId]"));
+
+            // CROSS JOIN Staff (since Staff doesn't have a direct FK relationship)
+            // In a real scenario, you might have a relationship like ClassTeacher or Department
+            // For this demo, we include Staff data as a separate section in the same federated query
+            federatedQuery.SubNodes.Add(new JoinElement(staffSourceNode, JoinType.LeftOuter,
+                "1 = 1"));  // Cross join - all staff visible
+
+            // ======================================================================
+            // SELECT COLUMNS from each source
+            // These are the columns that will be available in the federated result
+            // ======================================================================
+
+            // Pupil columns
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "PupilId"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "FirstName") { Alias = "PupilFirstName" });
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "LastName") { Alias = "PupilLastName" });
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "DateOfBirth"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "Class"));
+
+            // Assessment columns
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "AssessmentId"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Subject"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Score"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Date") { Alias = "AssessmentDate" });
+
+            // Staff columns
+            federatedQuery.Expressions.Add(new SelectColumnExpression(staffSourceNode, "StaffId"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(staffSourceNode, "FirstName") { Alias = "StaffFirstName" });
+            federatedQuery.Expressions.Add(new SelectColumnExpression(staffSourceNode, "LastName") { Alias = "StaffLastName" });
+            federatedQuery.Expressions.Add(new SelectColumnExpression(staffSourceNode, "Role"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(staffSourceNode, "Department"));
+
+            // Add the query to the federation
+            federationDataSource.Queries.Add(federatedQuery);
+
+            // Fill the federation schema (required for designer)
+            federationDataSource.RebuildResultSchema();
+
+            // Add to component storage
+            this.ComponentStorage.Add(federationDataSource);
+
+            // Set as the report's data source
+            this.DataSource = federationDataSource;
+            this.DataMember = "PupilStaffAssessments";
+
+            // Create report bands
+            SetupReportBands();
         }
 
         /// <summary>
-        /// Creates the visual layout of the report with sections for all 3 data sources.
+        /// Creates the visual layout showing federated data from all 3 sources in a single detail band.
         /// </summary>
-        private void SetupReportLayout(JsonDataSource staffDataSource, JsonDataSource assessmentDataSource)
+        private void SetupReportBands()
         {
             // ======================================================================
             // REPORT HEADER
             // ======================================================================
             var reportHeader = new ReportHeaderBand();
             reportHeader.HeightF = 60F;
-            reportHeader.Name = "DynamicReportHeader";
+            reportHeader.Name = "ReportHeader";
 
             var titleLabel = new XRLabel();
-            titleLabel.Text = "DYNAMIC COLUMN SELECTION REPORT";
-            titleLabel.SizeF = new SizeF(700F, 35F);
+            titleLabel.Text = "FEDERATED DATA REPORT (All 3 Sources Linked)";
+            titleLabel.SizeF = new SizeF(750F, 35F);
             titleLabel.LocationF = new PointF(0F, 5F);
             titleLabel.Font = new Font("Arial", 16F, FontStyle.Bold);
             titleLabel.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
             reportHeader.Controls.Add(titleLabel);
 
             var instructionLabel = new XRLabel();
-            instructionLabel.Text = "Set column parameters before preview to filter data";
-            instructionLabel.SizeF = new SizeF(700F, 20F);
+            instructionLabel.Text = "Set PupilColumns, StaffColumns, AssessmentColumns parameters to filter data";
+            instructionLabel.SizeF = new SizeF(750F, 20F);
             instructionLabel.LocationF = new PointF(0F, 40F);
             instructionLabel.Font = new Font("Arial", 10F, FontStyle.Italic);
             instructionLabel.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
@@ -138,221 +205,124 @@ namespace DXApplication1.PredefinedReports
             this.Bands.Add(reportHeader);
 
             // ======================================================================
-            // PUPIL SECTION (Primary Data Source - uses main Detail band)
+            // PAGE HEADER - Column Headers for all federated data
             // ======================================================================
-            var pupilHeader = new GroupHeaderBand();
-            pupilHeader.HeightF = 50F;
-            pupilHeader.Name = "PupilGroupHeader";
-            pupilHeader.RepeatEveryPage = true;
-            pupilHeader.Level = 1;
+            var pageHeader = new PageHeaderBand();
+            pageHeader.HeightF = 50F;
+            pageHeader.Name = "PageHeader";
 
+            // Section labels
             var pupilSectionLabel = new XRLabel();
-            pupilSectionLabel.Text = "PUPILS";
-            pupilSectionLabel.SizeF = new SizeF(700F, 25F);
+            pupilSectionLabel.Text = "PUPIL DATA";
+            pupilSectionLabel.SizeF = new SizeF(250F, 20F);
             pupilSectionLabel.LocationF = new PointF(0F, 0F);
-            pupilSectionLabel.Font = new Font("Arial", 14F, FontStyle.Bold);
+            pupilSectionLabel.Font = new Font("Arial", 9F, FontStyle.Bold);
             pupilSectionLabel.BackColor = Color.LightBlue;
-            pupilHeader.Controls.Add(pupilSectionLabel);
-
-            // Pupil table header
-            var pupilHeaderTable = new XRTable();
-            pupilHeaderTable.LocationF = new PointF(0F, 25F);
-            pupilHeaderTable.SizeF = new SizeF(700F, 25F);
-            pupilHeaderTable.Name = "PupilHeaderTable";
-
-            var pupilHeaderRow = new XRTableRow();
-            pupilHeaderRow.HeightF = 25F;
-
-            var headers = new[] { "Pupil ID", "First Name", "Last Name", "DOB", "Class" };
-            foreach (var header in headers)
-            {
-                var cell = new XRTableCell
-                {
-                    Text = header,
-                    Font = new Font("Arial", 10F, FontStyle.Bold),
-                    BackColor = Color.LightGray,
-                    Borders = DevExpress.XtraPrinting.BorderSide.All
-                };
-                pupilHeaderRow.Cells.Add(cell);
-            }
-
-            pupilHeaderTable.Rows.Add(pupilHeaderRow);
-            pupilHeader.Controls.Add(pupilHeaderTable);
-            this.Bands.Add(pupilHeader);
-
-            // Pupil detail band
-            var pupilDetail = new DetailBand();
-            pupilDetail.HeightF = 25F;
-            pupilDetail.Name = "PupilDetail";
-
-            var pupilDataTable = new XRTable();
-            pupilDataTable.LocationF = new PointF(0F, 0F);
-            pupilDataTable.SizeF = new SizeF(700F, 25F);
-            pupilDataTable.Name = "PupilDataTable";
-
-            var pupilDataRow = new XRTableRow();
-            pupilDataRow.HeightF = 25F;
-
-            var pupilBindings = new[] { "PupilId", "FirstName", "LastName", "DateOfBirth", "Class" };
-            foreach (var binding in pupilBindings)
-            {
-                var cell = new XRTableCell();
-                cell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", $"[{binding}]"));
-                cell.Borders = DevExpress.XtraPrinting.BorderSide.All;
-                pupilDataRow.Cells.Add(cell);
-            }
-
-            pupilDataTable.Rows.Add(pupilDataRow);
-            pupilDetail.Controls.Add(pupilDataTable);
-            this.Bands.Add(pupilDetail);
-
-            // ======================================================================
-            // STAFF SECTION - Using DetailReportBand with its own DataSource
-            // ======================================================================
-            var staffDetailReport = new DetailReportBand();
-            staffDetailReport.Name = "StaffDetailReport";
-            staffDetailReport.DataSource = staffDataSource;
-            staffDetailReport.DataMember = string.Empty;
-            staffDetailReport.Level = 0;
-
-            var staffHeader = new GroupHeaderBand();
-            staffHeader.HeightF = 50F;
-            staffHeader.Name = "StaffGroupHeader";
-            staffHeader.RepeatEveryPage = true;
-
-            var staffSectionLabel = new XRLabel();
-            staffSectionLabel.Text = "STAFF";
-            staffSectionLabel.SizeF = new SizeF(700F, 25F);
-            staffSectionLabel.LocationF = new PointF(0F, 0F);
-            staffSectionLabel.Font = new Font("Arial", 14F, FontStyle.Bold);
-            staffSectionLabel.BackColor = Color.LightGreen;
-            staffHeader.Controls.Add(staffSectionLabel);
-
-            var staffHeaderTable = new XRTable();
-            staffHeaderTable.LocationF = new PointF(0F, 25F);
-            staffHeaderTable.SizeF = new SizeF(700F, 25F);
-            staffHeaderTable.Name = "StaffHeaderTable";
-
-            var staffHeaderRow = new XRTableRow();
-            staffHeaderRow.HeightF = 25F;
-
-            var staffHeaders = new[] { "Staff ID", "First Name", "Last Name", "Role", "Department" };
-            foreach (var header in staffHeaders)
-            {
-                var cell = new XRTableCell
-                {
-                    Text = header,
-                    Font = new Font("Arial", 10F, FontStyle.Bold),
-                    BackColor = Color.LightGray,
-                    Borders = DevExpress.XtraPrinting.BorderSide.All
-                };
-                staffHeaderRow.Cells.Add(cell);
-            }
-
-            staffHeaderTable.Rows.Add(staffHeaderRow);
-            staffHeader.Controls.Add(staffHeaderTable);
-
-            var staffDetail = new DetailBand();
-            staffDetail.HeightF = 25F;
-            staffDetail.Name = "StaffDetail";
-
-            var staffDataTable = new XRTable();
-            staffDataTable.LocationF = new PointF(0F, 0F);
-            staffDataTable.SizeF = new SizeF(700F, 25F);
-            staffDataTable.Name = "StaffDataTable";
-
-            var staffDataRow = new XRTableRow();
-            staffDataRow.HeightF = 25F;
-
-            var staffBindings = new[] { "StaffId", "FirstName", "LastName", "Role", "Department" };
-            foreach (var binding in staffBindings)
-            {
-                var cell = new XRTableCell();
-                cell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", $"[{binding}]"));
-                cell.Borders = DevExpress.XtraPrinting.BorderSide.All;
-                staffDataRow.Cells.Add(cell);
-            }
-
-            staffDataTable.Rows.Add(staffDataRow);
-            staffDetail.Controls.Add(staffDataTable);
-
-            staffDetailReport.Bands.Add(staffHeader);
-            staffDetailReport.Bands.Add(staffDetail);
-            this.Bands.Add(staffDetailReport);
-
-            // ======================================================================
-            // ASSESSMENT SECTION - Using DetailReportBand with its own DataSource
-            // ======================================================================
-            var assessmentDetailReport = new DetailReportBand();
-            assessmentDetailReport.Name = "AssessmentDetailReport";
-            assessmentDetailReport.DataSource = assessmentDataSource;
-            assessmentDetailReport.DataMember = string.Empty;
-            assessmentDetailReport.Level = 1;
-
-            var assessmentHeader = new GroupHeaderBand();
-            assessmentHeader.HeightF = 50F;
-            assessmentHeader.Name = "AssessmentGroupHeader";
-            assessmentHeader.RepeatEveryPage = true;
+            pupilSectionLabel.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            pageHeader.Controls.Add(pupilSectionLabel);
 
             var assessmentSectionLabel = new XRLabel();
-            assessmentSectionLabel.Text = "ASSESSMENTS";
-            assessmentSectionLabel.SizeF = new SizeF(700F, 25F);
-            assessmentSectionLabel.LocationF = new PointF(0F, 0F);
-            assessmentSectionLabel.Font = new Font("Arial", 14F, FontStyle.Bold);
+            assessmentSectionLabel.Text = "ASSESSMENT DATA";
+            assessmentSectionLabel.SizeF = new SizeF(200F, 20F);
+            assessmentSectionLabel.LocationF = new PointF(250F, 0F);
+            assessmentSectionLabel.Font = new Font("Arial", 9F, FontStyle.Bold);
             assessmentSectionLabel.BackColor = Color.LightCoral;
-            assessmentHeader.Controls.Add(assessmentSectionLabel);
+            assessmentSectionLabel.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            pageHeader.Controls.Add(assessmentSectionLabel);
 
-            var assessmentHeaderTable = new XRTable();
-            assessmentHeaderTable.LocationF = new PointF(0F, 25F);
-            assessmentHeaderTable.SizeF = new SizeF(700F, 25F);
-            assessmentHeaderTable.Name = "AssessmentHeaderTable";
+            var staffSectionLabel = new XRLabel();
+            staffSectionLabel.Text = "STAFF DATA";
+            staffSectionLabel.SizeF = new SizeF(300F, 20F);
+            staffSectionLabel.LocationF = new PointF(450F, 0F);
+            staffSectionLabel.Font = new Font("Arial", 9F, FontStyle.Bold);
+            staffSectionLabel.BackColor = Color.LightGreen;
+            staffSectionLabel.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
+            pageHeader.Controls.Add(staffSectionLabel);
 
-            var assessmentHeaderRow = new XRTableRow();
-            assessmentHeaderRow.HeightF = 25F;
+            // Column headers table
+            var headerTable = new XRTable();
+            headerTable.LocationF = new PointF(0F, 22F);
+            headerTable.SizeF = new SizeF(750F, 25F);
+            headerTable.Name = "HeaderTable";
 
-            var assessmentHeaders = new[] { "Assessment ID", "Pupil ID", "Subject", "Score", "Date" };
-            foreach (var header in assessmentHeaders)
+            var headerRow = new XRTableRow();
+            headerRow.HeightF = 25F;
+
+            // Headers for all federated columns
+            var headers = new[] 
+            { 
+                // Pupil headers
+                "Pupil ID", "First Name", "Last Name", "DOB", "Class",
+                // Assessment headers
+                "Subject", "Score", "Date",
+                // Staff headers
+                "Staff ID", "First Name", "Last Name", "Role", "Department"
+            };
+
+            var headerColors = new[]
+            {
+                // Pupil (light blue)
+                Color.LightBlue, Color.LightBlue, Color.LightBlue, Color.LightBlue, Color.LightBlue,
+                // Assessment (light coral)
+                Color.LightCoral, Color.LightCoral, Color.LightCoral,
+                // Staff (light green)
+                Color.LightGreen, Color.LightGreen, Color.LightGreen, Color.LightGreen, Color.LightGreen
+            };
+
+            for (int i = 0; i < headers.Length; i++)
             {
                 var cell = new XRTableCell
                 {
-                    Text = header,
-                    Font = new Font("Arial", 10F, FontStyle.Bold),
-                    BackColor = Color.LightGray,
+                    Text = headers[i],
+                    Font = new Font("Arial", 8F, FontStyle.Bold),
+                    BackColor = headerColors[i],
                     Borders = DevExpress.XtraPrinting.BorderSide.All
                 };
-                assessmentHeaderRow.Cells.Add(cell);
+                headerRow.Cells.Add(cell);
             }
 
-            assessmentHeaderTable.Rows.Add(assessmentHeaderRow);
-            assessmentHeader.Controls.Add(assessmentHeaderTable);
+            headerTable.Rows.Add(headerRow);
+            pageHeader.Controls.Add(headerTable);
+            this.Bands.Add(pageHeader);
 
-            var assessmentDetail = new DetailBand();
-            assessmentDetail.HeightF = 25F;
-            assessmentDetail.Name = "AssessmentDetail";
+            // ======================================================================
+            // DETAIL BAND - Shows joined data from all 3 sources in one row
+            // ======================================================================
+            var detailBand = new DetailBand();
+            detailBand.HeightF = 25F;
+            detailBand.Name = "Detail";
 
-            var assessmentDataTable = new XRTable();
-            assessmentDataTable.LocationF = new PointF(0F, 0F);
-            assessmentDataTable.SizeF = new SizeF(700F, 25F);
-            assessmentDataTable.Name = "AssessmentDataTable";
+            var dataTable = new XRTable();
+            dataTable.LocationF = new PointF(0F, 0F);
+            dataTable.SizeF = new SizeF(750F, 25F);
+            dataTable.Name = "DataTable";
 
-            var assessmentDataRow = new XRTableRow();
-            assessmentDataRow.HeightF = 25F;
+            var dataRow = new XRTableRow();
+            dataRow.HeightF = 25F;
 
-            var assessmentBindings = new[] { "AssessmentId", "PupilId", "Subject", "Score", "Date" };
-            foreach (var binding in assessmentBindings)
+            // Bindings for all federated columns (matching the headers)
+            var bindings = new[] 
+            { 
+                // Pupil bindings
+                "PupilId", "PupilFirstName", "PupilLastName", "DateOfBirth", "Class",
+                // Assessment bindings
+                "Subject", "Score", "AssessmentDate",
+                // Staff bindings
+                "StaffId", "StaffFirstName", "StaffLastName", "Role", "Department"
+            };
+
+            foreach (var binding in bindings)
             {
                 var cell = new XRTableCell();
                 cell.ExpressionBindings.Add(new ExpressionBinding("BeforePrint", "Text", $"[{binding}]"));
                 cell.Borders = DevExpress.XtraPrinting.BorderSide.All;
-                assessmentDataRow.Cells.Add(cell);
+                cell.Font = new Font("Arial", 8F);
+                dataRow.Cells.Add(cell);
             }
 
-            assessmentDataTable.Rows.Add(assessmentDataRow);
-            assessmentDetail.Controls.Add(assessmentDataTable);
-
-            assessmentDetailReport.Bands.Add(assessmentHeader);
-            assessmentDetailReport.Bands.Add(assessmentDetail);
-            this.Bands.Add(assessmentDetailReport);
+            dataTable.Rows.Add(dataRow);
+            detailBand.Controls.Add(dataTable);
+            this.Bands.Add(detailBand);
 
             // ======================================================================
             // PAGE FOOTER
@@ -364,7 +334,7 @@ namespace DXApplication1.PredefinedReports
             var pageInfo = new XRPageInfo();
             pageInfo.Format = "Page {0} of {1}";
             pageInfo.SizeF = new SizeF(200F, 20F);
-            pageInfo.LocationF = new PointF(250F, 5F);
+            pageInfo.LocationF = new PointF(275F, 5F);
             pageInfo.TextAlignment = DevExpress.XtraPrinting.TextAlignment.MiddleCenter;
             pageFooter.Controls.Add(pageInfo);
             this.Bands.Add(pageFooter);
