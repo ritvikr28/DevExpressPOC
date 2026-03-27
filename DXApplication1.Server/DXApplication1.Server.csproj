@@ -13,6 +13,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="DevExpress.Drawing.Skia" Version="25.2.*" />
     <PackageReference Include="DevExpress.AspNetCore.Reporting" Version="25.2.*" />
+    <PackageReference Include="DevExpress.DataAccess" Version="25.2.*" />
     <PackageReference Include="ESS.Platform.Authorization" Version="1.3.10" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.18" />
