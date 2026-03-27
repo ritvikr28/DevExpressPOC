@@ -11,7 +11,8 @@ namespace DXApplication1.PredefinedReports
         public static Dictionary<string, Func<XtraReport>> Reports = new Dictionary<string, Func<XtraReport>>()
         {
             ["TestReport"] = () => new TestReport(),
-            ["MultiSourceReport"] = () => new MultiSourceReport()
+            ["MultiSourceReport"] = () => new MultiSourceReport(),
+            ["FederatedReport"] = () => new FederatedReport()
         };
     }
 }
