@@ -51,32 +51,36 @@ namespace DXApplication1.PredefinedReports
             var federationDataSource = new FederationDataSource();
             federationDataSource.Name = "PupilAssessmentFederation";
 
-            // Create the federated query that joins Pupil and Assessment on PupilId
-            // This is a LEFT JOIN so all pupils are shown, even those without assessments
-            var federatedQuery = new SelectNode();
-            federatedQuery.Alias = "PupilWithAssessments";
-
-            // Add Pupil source
+            // Create Source wrappers for Data Federation
+            // The third parameter is the data member/table name (empty string for root JSON arrays)
             var pupilSource = new Source("Pupils", pupilJsonSource, "");
-            
-            // Add Assessment source  
             var assessmentSource = new Source("Assessments", assessmentJsonSource, "");
 
-            // Create the JOIN condition: Pupils.PupilId = Assessments.PupilId
-            var joinNode = new JoinElement(pupilSource, JoinType.LeftOuter);
-            joinNode.SubNodes.Add(new JoinElement(assessmentSource, JoinType.LeftOuter,
-                "[Pupils.PupilId] = [Assessments.PupilId]"));
-            
-            federatedQuery.SubNodes.Add(joinNode);
+            // Create SourceNode wrappers (required for SelectNode and JoinElement)
+            var pupilSourceNode = new SourceNode(pupilSource, "Pupils");
+            var assessmentSourceNode = new SourceNode(assessmentSource, "Assessments");
 
-            // Select columns from both sources
-            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSource, "PupilId"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSource, "FirstName"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSource, "LastName"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSource, "Class"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSource, "Subject"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSource, "Score"));
-            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSource, "Date") { Alias = "AssessmentDate" });
+            // Create the federated query with the primary source
+            var federatedQuery = new SelectNode(pupilSourceNode)
+            {
+                Alias = "PupilWithAssessments"
+            };
+
+            // Add LEFT OUTER JOIN to Assessment source on PupilId
+            // The condition uses the SourceNode aliases
+            federatedQuery.SubNodes.Add(new JoinElement(assessmentSourceNode, JoinType.LeftOuter,
+                "[Pupils.PupilId] = [Assessments.PupilId]"));
+
+            // Select columns from Pupil source (using SourceNode)
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "PupilId"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "FirstName"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "LastName"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(pupilSourceNode, "Class"));
+
+            // Select columns from Assessment source (using SourceNode)
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Subject"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Score"));
+            federatedQuery.Expressions.Add(new SelectColumnExpression(assessmentSourceNode, "Date") { Alias = "AssessmentDate" });
 
             // Add the query to the federation
             federationDataSource.Queries.Add(federatedQuery);
