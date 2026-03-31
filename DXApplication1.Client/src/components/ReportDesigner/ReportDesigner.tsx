@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import DxReportDesigner, { Callbacks, DesignerModelSettings, PreviewSettings, RequestOptions } from "devexpress-reporting-react/dx-report-designer";
+import { useCallback, useMemo, useRef, useState } from 'react';
+import DxReportDesigner, { Callbacks, DesignerModelSettings, PreviewSettings, RequestOptions, DxReportDesignerRef } from "devexpress-reporting-react/dx-report-designer";
 import { SearchSettings } from 'devexpress-reporting-react/dx-report-viewer';
 import { fetchSetup } from '@devexpress/analytics-core/analytics-utils';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -9,6 +9,28 @@ import './ReportDesigner.css';
 // Height constants for the designer component
 const NAVBAR_HEIGHT = 90; // Main navbar height in pixels
 const BANNER_HEIGHT = 50; // Data sources banner height in pixels
+const CUSTOM_TOOLBAR_HEIGHT = 50; // Custom toolbar height in pixels
+
+// Action IDs for buttons to hide/disable
+const HIDDEN_ACTION_IDS = [
+    'dxrd-preview',              // Hide built-in Preview (moved to custom location)
+    'dxrd-addSqlDataSource',     // Hide SQL Data Source button
+    'dxrd-addObjectDataSource',  // Hide Object Data Source button
+    'dxrd-addJsonDataSource',    // Hide JSON Data Source button (if present)
+    'dxrd-addFederatedDataSource', // Hide Federated Data Source button
+    'dxrd-manageQueries',        // Hide Manage Queries button
+    'dxrd-script-editor',        // Hide Script Editor
+];
+
+// Type definitions for DevExpress menu action customization
+interface MenuAction {
+    id: string;
+    visible: boolean;
+}
+
+interface CustomizeMenuActionsEvent {
+    Actions: MenuAction[];
+}
 
 export default function ReportDesigner(props: { hostUrl: string }) {
     const [searchParams] = useSearchParams();
@@ -16,16 +38,24 @@ export default function ReportDesigner(props: { hostUrl: string }) {
     const getLocalizationAction: string = 'DXXRD/GetLocalization';
     const reportUrl: string = searchParams.get('reportUrl') ?? 'TestReport';
     
+    // Reference to the designer for programmatic control
+    const designerRef = useRef<DxReportDesignerRef>(null);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    
     // Parse selected data sources from query params (passed from DataSourceSelector)
     const selectedDataSources = useMemo(() => {
         const sourcesParam = searchParams.get('dataSources');
         return sourcesParam ? sourcesParam.split(',').filter(s => s.trim()) : [];
     }, [searchParams]);
     
-    // Calculate designer height based on whether banner is shown
-    const designerHeight = selectedDataSources.length > 0 
-        ? `calc(100vh - ${NAVBAR_HEIGHT + BANNER_HEIGHT}px)` 
-        : `calc(100vh - ${NAVBAR_HEIGHT}px)`;
+    // Calculate designer height based on whether banner is shown and custom toolbar
+    const designerHeight = useMemo(() => {
+        let height = NAVBAR_HEIGHT + CUSTOM_TOOLBAR_HEIGHT;
+        if (selectedDataSources.length > 0) {
+            height += BANNER_HEIGHT;
+        }
+        return `calc(100vh - ${height}px)`;
+    }, [selectedDataSources.length]);
     
     // BeforeRender fires before the DevExpress designer makes any HTTP requests,
     // so this is the correct place to ensure the Authorization header is set.
@@ -40,8 +70,72 @@ export default function ReportDesigner(props: { hostUrl: string }) {
         }
     }, []);
     
+    // Customize menu actions - hide/disable specific buttons
+    const onCustomizeMenuActions = useCallback((event: CustomizeMenuActionsEvent) => {
+        const actions = event.Actions;
+        if (actions && Array.isArray(actions)) {
+            actions.forEach((action: MenuAction) => {
+                if (HIDDEN_ACTION_IDS.includes(action.id)) {
+                    action.visible = false;
+                }
+            });
+        }
+    }, []);
+    
+    // Custom Preview button handler - triggers preview mode programmatically
+    const handlePreviewClick = useCallback(() => {
+        if (designerRef.current) {
+            try {
+                // Access the designer instance and trigger preview
+                const designerInstance = designerRef.current.instance();
+                if (designerInstance) {
+                    designerInstance.ShowPreview();
+                    setIsPreviewMode(true);
+                }
+            } catch (error) {
+                console.error('Failed to trigger preview:', error);
+            }
+        }
+    }, []);
+    
+    // Return to design mode - navigate back by clicking the design tab
+    const handleDesignModeClick = useCallback(() => {
+        // Simply toggle the state - the designer handles the mode internally
+        setIsPreviewMode(false);
+        // The designer's built-in navigation will handle returning to design mode
+        // when the user clicks the "Designer" tab in the preview
+    }, []);
+    
     return (
         <div className="report-designer-container">
+            {/* Custom Toolbar with Preview button moved here */}
+            <div className="custom-designer-toolbar">
+                <div className="toolbar-section">
+                    <span className="toolbar-title">Report Designer</span>
+                </div>
+                <div className="toolbar-section toolbar-actions">
+                    {!isPreviewMode ? (
+                        <button 
+                            className="btn btn-primary preview-btn"
+                            onClick={handlePreviewClick}
+                            title="Preview Report"
+                        >
+                            <i className="dx-icon dx-icon-preview"></i>
+                            Preview
+                        </button>
+                    ) : (
+                        <button 
+                            className="btn btn-secondary design-btn"
+                            onClick={handleDesignModeClick}
+                            title="Return to Design Mode"
+                        >
+                            <i className="dx-icon dx-icon-edit"></i>
+                            Design
+                        </button>
+                    )}
+                </div>
+            </div>
+            
             {/* Show selected data sources banner if coming from DataSourceSelector */}
             {selectedDataSources.length > 0 && (
                 <div className="selected-sources-banner alert alert-info mb-0">
@@ -60,9 +154,17 @@ export default function ReportDesigner(props: { hostUrl: string }) {
                 </div>
             )}
             
-            <DxReportDesigner reportUrl={reportUrl} height={designerHeight} developmentMode={true}>
+            <DxReportDesigner 
+                ref={designerRef}
+                reportUrl={reportUrl} 
+                height={designerHeight} 
+                developmentMode={true}
+            >
                 <RequestOptions host={props.hostUrl} getLocalizationAction={getLocalizationAction} getDesignerModelAction={getDesignerModelAction} />
-                <Callbacks BeforeRender={onBeforeRender}></Callbacks>
+                <Callbacks 
+                    BeforeRender={onBeforeRender}
+                    CustomizeMenuActions={onCustomizeMenuActions}
+                />
                 <DesignerModelSettings>
                     <PreviewSettings>
                         <SearchSettings searchEnabled={true}></SearchSettings>

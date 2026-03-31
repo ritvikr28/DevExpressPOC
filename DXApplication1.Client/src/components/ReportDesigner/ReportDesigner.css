@@ -13,6 +13,61 @@
     height: calc(100vh - 90px);
 }
 
+/* Custom Toolbar Styles */
+.custom-designer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    height: 50px;
+    box-sizing: border-box;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbar-title {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: #333;
+}
+
+.toolbar-actions {
+    gap: 8px;
+}
+
+.preview-btn,
+.design-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.preview-btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.design-btn:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+}
+
+.preview-btn i,
+.design-btn i {
+    font-size: 16px;
+}
+
+/* Selected Data Sources Banner */
 .selected-sources-banner {
     display: flex;
     align-items: center;
