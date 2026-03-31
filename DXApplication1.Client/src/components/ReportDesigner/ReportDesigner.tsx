@@ -12,6 +12,7 @@ const BANNER_HEIGHT = 50; // Data sources banner height in pixels
 const CUSTOM_TOOLBAR_HEIGHT = 50; // Custom toolbar height in pixels
 
 // Action IDs for buttons to hide/disable
+// DevExpress uses ActionId enum values for standard actions
 const HIDDEN_ACTION_IDS = [
     'dxrd-preview',              // Hide built-in Preview (moved to custom location)
     'dxrd-addSqlDataSource',     // Hide SQL Data Source button
@@ -28,8 +29,15 @@ interface MenuAction {
     visible: boolean;
 }
 
-interface CustomizeMenuActionsEvent {
+// DevExpress callback args interface with GetById method
+interface CustomizeMenuActionsArgs {
     Actions: MenuAction[];
+    GetById: (id: string) => MenuAction | undefined;
+}
+
+interface CustomizeMenuActionsEvent {
+    sender: unknown;
+    args: CustomizeMenuActionsArgs;
 }
 
 // Type definition for TabChanged event (DevExpress callback)
@@ -80,14 +88,46 @@ export default function ReportDesigner(props: { hostUrl: string }) {
     }, []);
     
     // Customize menu actions - hide/disable specific buttons
+    // DevExpress uses { sender, args } pattern where args.GetById() retrieves actions
     const onCustomizeMenuActions = useCallback((event: CustomizeMenuActionsEvent) => {
-        const actions = event.Actions;
-        if (actions && Array.isArray(actions)) {
-            actions.forEach((action: MenuAction) => {
-                if (HIDDEN_ACTION_IDS.includes(action.id)) {
+        // Debug log to help identify the event structure
+        console.log('CustomizeMenuActions event:', event);
+        console.log('Event keys:', Object.keys(event || {}));
+        
+        const { args } = event;
+        
+        // Try GetById first (DevExpress preferred approach)
+        if (args && typeof args.GetById === 'function') {
+            console.log('Using GetById approach');
+            HIDDEN_ACTION_IDS.forEach(actionId => {
+                const action = args.GetById(actionId);
+                if (action) {
+                    console.log(`Hiding action: ${actionId}`);
                     action.visible = false;
                 }
             });
+        } 
+        // Fallback: iterate over Actions array if GetById is not available
+        else if (args && args.Actions && Array.isArray(args.Actions)) {
+            console.log('Using args.Actions array approach');
+            args.Actions.forEach((action: MenuAction) => {
+                if (HIDDEN_ACTION_IDS.includes(action.id)) {
+                    console.log(`Hiding action: ${action.id}`);
+                    action.visible = false;
+                }
+            });
+        }
+        // Direct event.Actions fallback (older API style)
+        else if ((event as any).Actions && Array.isArray((event as any).Actions)) {
+            console.log('Using direct event.Actions approach');
+            (event as any).Actions.forEach((action: MenuAction) => {
+                if (HIDDEN_ACTION_IDS.includes(action.id)) {
+                    console.log(`Hiding action: ${action.id}`);
+                    action.visible = false;
+                }
+            });
+        } else {
+            console.warn('CustomizeMenuActions: Could not find Actions in event structure');
         }
     }, []);
     
