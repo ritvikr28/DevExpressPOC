@@ -32,6 +32,15 @@ interface CustomizeMenuActionsEvent {
     Actions: MenuAction[];
 }
 
+// Type definition for TabChanged event (DevExpress callback)
+interface TabChangedEvent {
+    Tab?: {
+        context?: {
+            designMode?: () => boolean;
+        };
+    };
+}
+
 export default function ReportDesigner(props: { hostUrl: string }) {
     const [searchParams] = useSearchParams();
     const getDesignerModelAction: string = 'DXXRD/GetDesignerModel';
@@ -83,12 +92,14 @@ export default function ReportDesigner(props: { hostUrl: string }) {
     }, []);
     
     // Custom Preview button handler - triggers preview mode programmatically
+    // Uses DevExpress API: instance() returns JSReportDesigner, ShowPreview() switches to preview mode
     const handlePreviewClick = useCallback(() => {
         if (designerRef.current) {
             try {
-                // Access the designer instance and trigger preview
+                // DevExpress API: instance() returns the underlying JSReportDesigner object
                 const designerInstance = designerRef.current.instance();
                 if (designerInstance) {
+                    // DevExpress API: ShowPreview() method switches the designer to preview mode
                     designerInstance.ShowPreview();
                     setIsPreviewMode(true);
                 }
@@ -98,21 +109,22 @@ export default function ReportDesigner(props: { hostUrl: string }) {
         }
     }, []);
     
-    // Callback when preview mode is entered (also triggered by our custom button)
+    // DevExpress callback: fired when preview mode is entered (also triggered by our custom button)
     const onPreviewClick = useCallback(() => {
         setIsPreviewMode(true);
     }, []);
     
-    // Callback when tab changes - check if returning to designer
-    const onTabChanged = useCallback((event: { Tab?: { context?: { designMode?: () => boolean } } }) => {
+    // DevExpress callback: fired when tab changes - check if returning to designer
+    const onTabChanged = useCallback((event: TabChangedEvent) => {
         // When tab changes, check if we're back in design mode
         try {
             const isDesignMode = event.Tab?.context?.designMode?.();
             if (isDesignMode !== undefined) {
                 setIsPreviewMode(!isDesignMode);
             }
-        } catch {
-            // Fallback: assume design mode when tab changes
+        } catch (error) {
+            // Log error and fallback to design mode assumption
+            console.warn('Failed to determine designer mode from tab change:', error);
             setIsPreviewMode(false);
         }
     }, []);
