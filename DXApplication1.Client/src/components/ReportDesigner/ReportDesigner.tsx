@@ -98,12 +98,23 @@ export default function ReportDesigner(props: { hostUrl: string }) {
         }
     }, []);
     
-    // Return to design mode - navigate back by clicking the design tab
-    const handleDesignModeClick = useCallback(() => {
-        // Simply toggle the state - the designer handles the mode internally
-        setIsPreviewMode(false);
-        // The designer's built-in navigation will handle returning to design mode
-        // when the user clicks the "Designer" tab in the preview
+    // Callback when preview mode is entered (also triggered by our custom button)
+    const onPreviewClick = useCallback(() => {
+        setIsPreviewMode(true);
+    }, []);
+    
+    // Callback when tab changes - check if returning to designer
+    const onTabChanged = useCallback((event: { Tab?: { context?: { designMode?: () => boolean } } }) => {
+        // When tab changes, check if we're back in design mode
+        try {
+            const isDesignMode = event.Tab?.context?.designMode?.();
+            if (isDesignMode !== undefined) {
+                setIsPreviewMode(!isDesignMode);
+            }
+        } catch {
+            // Fallback: assume design mode when tab changes
+            setIsPreviewMode(false);
+        }
     }, []);
     
     return (
@@ -112,27 +123,20 @@ export default function ReportDesigner(props: { hostUrl: string }) {
             <div className="custom-designer-toolbar">
                 <div className="toolbar-section">
                     <span className="toolbar-title">Report Designer</span>
+                    {isPreviewMode && (
+                        <span className="badge bg-info ms-2">Preview Mode</span>
+                    )}
                 </div>
                 <div className="toolbar-section toolbar-actions">
-                    {!isPreviewMode ? (
-                        <button 
-                            className="btn btn-primary preview-btn"
-                            onClick={handlePreviewClick}
-                            title="Preview Report"
-                        >
-                            <i className="dx-icon dx-icon-preview"></i>
-                            Preview
-                        </button>
-                    ) : (
-                        <button 
-                            className="btn btn-secondary design-btn"
-                            onClick={handleDesignModeClick}
-                            title="Return to Design Mode"
-                        >
-                            <i className="dx-icon dx-icon-edit"></i>
-                            Design
-                        </button>
-                    )}
+                    <button 
+                        className="btn btn-primary preview-btn"
+                        onClick={handlePreviewClick}
+                        title="Preview Report"
+                        disabled={isPreviewMode}
+                    >
+                        <i className="dx-icon dx-icon-preview"></i>
+                        Preview
+                    </button>
                 </div>
             </div>
             
@@ -164,6 +168,8 @@ export default function ReportDesigner(props: { hostUrl: string }) {
                 <Callbacks 
                     BeforeRender={onBeforeRender}
                     CustomizeMenuActions={onCustomizeMenuActions}
+                    PreviewClick={onPreviewClick}
+                    TabChanged={onTabChanged}
                 />
                 <DesignerModelSettings>
                     <PreviewSettings>

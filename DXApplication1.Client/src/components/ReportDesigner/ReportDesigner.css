@@ -41,8 +41,7 @@
     gap: 8px;
 }
 
-.preview-btn,
-.design-btn {
+.preview-btn {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -52,18 +51,17 @@
     transition: all 0.2s ease;
 }
 
-.preview-btn:hover {
+.preview-btn:hover:not(:disabled) {
     background-color: #0056b3;
     transform: translateY(-1px);
 }
 
-.design-btn:hover {
-    background-color: #5a6268;
-    transform: translateY(-1px);
+.preview-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.preview-btn i,
-.design-btn i {
+.preview-btn i {
     font-size: 16px;
 }
 
