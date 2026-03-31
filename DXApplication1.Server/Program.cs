@@ -42,6 +42,15 @@ builder.Services.ConfigureReportingServices(configurator =>
     {
         // Register your API-based connection provider for the designer
         designerConfigurator.RegisterDataSourceWizardJsonConnectionStorage<CustomApiDataConnectionStorage>(true);
+        
+        // Disable all data source wizards - users can only use pre-configured JSON data sources
+        // This prevents users from adding SQL, Object, Entity Framework, or other data source types
+        designerConfigurator.DataSourceWizardSettings.DisableSqlDataSource = true;
+        designerConfigurator.DataSourceWizardSettings.DisableObjectDataSource = true;
+        designerConfigurator.DataSourceWizardSettings.DisableEntityFrameworkDataSource = true;
+        designerConfigurator.DataSourceWizardSettings.DisableFederationDataSource = true;
+        designerConfigurator.DataSourceWizardSettings.DisableJsonDataSource = true;
+        designerConfigurator.DataSourceWizardSettings.DisableExcelDataSource = true;
     });
     configurator.ConfigureWebDocumentViewer(viewerConfigurator =>
     {
