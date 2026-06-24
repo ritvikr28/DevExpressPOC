@@ -187,7 +187,8 @@ namespace DXApplication1.PredefinedReports
                 Summary = new XRSummary
                 {
                     Func = SummaryFunc.Sum,
-                    Running = SummaryRunning.Group
+                    Running = SummaryRunning.Group,
+                    FormatString = "{0:N0}"
                 }
             };
             totalValueLabel.ExpressionBindings.Add(
