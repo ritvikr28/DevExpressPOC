@@ -10,5 +10,9 @@
   {
     "Name": "Assessment",
     "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=Assessment;RootElement="
+  },
+  {
+    "Name": "PupilResult",
+    "ConnectionString": "Uri={baseUrl}/api/v1/data?dataSourceName=PupilResult;RootElement="
   }
 ]

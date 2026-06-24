@@ -1,0 +1,12 @@
+[
+  { "PupilId": 1, "PupilName": "Alice Smith", "Subject": "Mathematics", "Marks": 85 },
+  { "PupilId": 1, "PupilName": "Alice Smith", "Subject": "Science", "Marks": 92 },
+  { "PupilId": 1, "PupilName": "Alice Smith", "Subject": "English", "Marks": 78 },
+  { "PupilId": 1, "PupilName": "Alice Smith", "Subject": "History", "Marks": 88 },
+  { "PupilId": 1, "PupilName": "Alice Smith", "Subject": "Geography", "Marks": 75 },
+  { "PupilId": 2, "PupilName": "Bob Johnson", "Subject": "Mathematics", "Marks": 76 },
+  { "PupilId": 2, "PupilName": "Bob Johnson", "Subject": "Science", "Marks": 88 },
+  { "PupilId": 2, "PupilName": "Bob Johnson", "Subject": "English", "Marks": 91 },
+  { "PupilId": 2, "PupilName": "Bob Johnson", "Subject": "History", "Marks": 83 },
+  { "PupilId": 2, "PupilName": "Bob Johnson", "Subject": "Geography", "Marks": 79 }
+]

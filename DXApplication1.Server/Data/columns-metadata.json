@@ -43,6 +43,24 @@
       "type": "string"
     }
   ],
+  "PupilResult": [
+    {
+      "name": "PupilId",
+      "type": "int"
+    },
+    {
+      "name": "PupilName",
+      "type": "string"
+    },
+    {
+      "name": "Subject",
+      "type": "string"
+    },
+    {
+      "name": "Marks",
+      "type": "int"
+    }
+  ],
   "Assessment": [
     {
       "name": "AssessmentId",

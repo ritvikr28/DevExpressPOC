@@ -32,6 +32,7 @@ namespace DXApplication1.Server.Controllers
                 "pupil" => "Data/pupil-data.json",
                 "staff" => "Data/staff-data.json",
                 "assessment" => "Data/assessment-data.json",
+                "pupilresult" => "Data/pupil-results.json",
                 _ => null
             };
         }
